@@ -139,6 +139,27 @@ def test_load_corpus_rejects_duplicate_ids(tmp_path):
         load_corpus(corpus_path)
 
 
+def test_load_corpus_rejects_missing_audio_when_required(tmp_path):
+    corpus_path = tmp_path / "bad.json"
+    corpus_path.write_text(
+        """
+        [
+          {
+            "id": "missing-001",
+            "audio_path": "samples/missing.wav",
+            "reference": "hello world",
+            "mode": "auto",
+            "category": "english"
+          }
+        ]
+        """.strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="audio_path|missing"):
+        load_corpus(corpus_path, require_audio_exists=True)
+
+
 def test_load_corpus_loads_checked_in_corpus():
     corpus_path = Path("data/benchmarks/stt_corpus.json")
 
