@@ -163,7 +163,7 @@ def test_load_corpus_rejects_missing_audio_when_required(tmp_path):
 def test_load_corpus_loads_checked_in_corpus():
     corpus_path = Path("data/benchmarks/stt_corpus.json")
 
-    rows = load_corpus(corpus_path)
+    rows = load_corpus(corpus_path, require_audio_exists=True)
     ids = [row["id"] for row in rows]
     modes = {row["mode"] for row in rows}
     categories = {row["category"] for row in rows}
