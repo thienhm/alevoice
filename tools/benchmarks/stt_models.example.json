@@ -1,0 +1,10 @@
+{
+  "whispercpp": {
+    "binary": "/absolute/path/to/whisper-cli",
+    "model": "/absolute/path/to/ggml-model.bin"
+  },
+  "funasr": {
+    "binary": "/absolute/path/to/funasr-cli",
+    "model": "/absolute/path/to/funasr-gguf-model"
+  }
+}

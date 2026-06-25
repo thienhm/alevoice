@@ -1,0 +1,30 @@
+[
+  {
+    "id": "en-001",
+    "audio_path": "samples/en-001.wav",
+    "reference": "open terminal and show git status",
+    "mode": "auto",
+    "category": "english"
+  },
+  {
+    "id": "vi-001",
+    "audio_path": "samples/vi-001.wav",
+    "reference": "mo terminal va hien thi git status",
+    "mode": "vi",
+    "category": "vietnamese"
+  },
+  {
+    "id": "mix-001",
+    "audio_path": "samples/mix-001.wav",
+    "reference": "mo Slack va draft release notes cho sprint nay",
+    "mode": "auto",
+    "category": "mixed_vi_en"
+  },
+  {
+    "id": "fmt-001",
+    "audio_path": "samples/fmt-001.wav",
+    "reference": "new line bullet benchmark summary colon whisper cpp faster",
+    "mode": "en",
+    "category": "formatting_command"
+  }
+]
