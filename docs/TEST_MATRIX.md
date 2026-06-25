@@ -19,7 +19,7 @@ implemented until tests or validation evidence exist.
 
 | Story | Contract | Unit | Integration | E2E | Platform | Status | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| TBD | Add rows when story packets are created | no | no | no | no | planned | none |
+| US-001 | Benchmark `whisper.cpp` vs FunASR on target Mac before native shell build | planned | planned | no | planned | planned | story packet and durable story row |
 
 ## Evidence Rules
 
