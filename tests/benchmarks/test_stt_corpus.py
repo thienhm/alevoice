@@ -1,3 +1,7 @@
+from pathlib import Path
+
+import pytest
+
 from tools.benchmarks.stt_corpus import load_corpus
 
 
@@ -23,3 +27,98 @@ def test_load_corpus_rejects_missing_category(tmp_path):
         assert "category" in str(exc)
     else:
         raise AssertionError("expected ValueError")
+
+
+def test_load_corpus_rejects_invalid_mode(tmp_path):
+    corpus_path = tmp_path / "bad.json"
+    corpus_path.write_text(
+        """
+        [
+          {
+            "id": "en-001",
+            "audio_path": "samples/en-001.wav",
+            "reference": "hello world",
+            "mode": "de",
+            "category": "english"
+          }
+        ]
+        """.strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="mode"):
+        load_corpus(corpus_path)
+
+
+def test_load_corpus_rejects_wrong_top_level_shape(tmp_path):
+    corpus_path = tmp_path / "bad.json"
+    corpus_path.write_text(
+        """
+        {
+          "id": "en-001",
+          "audio_path": "samples/en-001.wav",
+          "reference": "hello world",
+          "mode": "auto",
+          "category": "english"
+        }
+        """.strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="list"):
+        load_corpus(corpus_path)
+
+
+def test_load_corpus_rejects_non_string_required_field(tmp_path):
+    corpus_path = tmp_path / "bad.json"
+    corpus_path.write_text(
+        """
+        [
+          {
+            "id": 12,
+            "audio_path": "samples/en-001.wav",
+            "reference": "hello world",
+            "mode": "auto",
+            "category": "english"
+          }
+        ]
+        """.strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="id"):
+        load_corpus(corpus_path)
+
+
+def test_load_corpus_rejects_empty_required_field(tmp_path):
+    corpus_path = tmp_path / "bad.json"
+    corpus_path.write_text(
+        """
+        [
+          {
+            "id": "en-001",
+            "audio_path": "samples/en-001.wav",
+            "reference": "",
+            "mode": "auto",
+            "category": "english"
+          }
+        ]
+        """.strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reference"):
+        load_corpus(corpus_path)
+
+
+def test_load_corpus_loads_checked_in_corpus():
+    corpus_path = Path("data/benchmarks/stt_corpus.json")
+
+    rows = load_corpus(corpus_path)
+    ids = [row["id"] for row in rows]
+    modes = {row["mode"] for row in rows}
+    categories = {row["category"] for row in rows}
+
+    assert len(ids) == len(set(ids))
+    assert modes <= {"auto", "en", "vi"}
+    assert {"english", "vietnamese", "mixed_vi_en", "formatting_command"} <= categories
