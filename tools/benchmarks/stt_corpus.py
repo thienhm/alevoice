@@ -12,6 +12,7 @@ def load_corpus(path: Path) -> list[dict[str, str]]:
     if not isinstance(rows, list):
         raise ValueError("corpus must be a list")
 
+    seen_ids: set[str] = set()
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
             raise ValueError(f"corpus row {index} must be an object")
@@ -27,5 +28,9 @@ def load_corpus(path: Path) -> list[dict[str, str]]:
 
         if row["mode"] not in ALLOWED_MODES:
             raise ValueError(f"corpus row {index} has invalid mode: {row['mode']}")
+
+        if row["id"] in seen_ids:
+            raise ValueError(f"corpus row {index} has duplicate id: {row['id']}")
+        seen_ids.add(row["id"])
 
     return rows
