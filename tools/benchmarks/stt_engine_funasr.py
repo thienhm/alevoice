@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -21,5 +23,20 @@ class FunASREngine:
             *mode_args,
         ]
 
+    @staticmethod
+    def parse_transcript(stdout: str) -> str:
+        return stdout.strip()
+
     def transcribe(self, audio_path: Path, mode: str) -> EngineResult:
-        raise NotImplementedError
+        start = time.perf_counter()
+        completed = subprocess.run(
+            self.build_command(audio_path, mode),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        end = time.perf_counter()
+        return EngineResult(
+            transcript=self.parse_transcript(completed.stdout),
+            latency_ms=int((end - start) * 1000),
+        )
