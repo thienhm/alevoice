@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+
+cd "$repo_root"
+
+swift build --product AleVoiceApp
+
+binary_path="$repo_root/.build/debug/AleVoiceApp"
+bundle_path="$repo_root/.build/debug/AleVoiceApp.app"
+contents_path="$bundle_path/Contents"
+macos_path="$contents_path/MacOS"
+
+mkdir -p "$macos_path"
+rm -f "$macos_path/AleVoiceApp"
+cp "$binary_path" "$macos_path/AleVoiceApp"
+chmod +x "$macos_path/AleVoiceApp"
+
+cat > "$contents_path/Info.plist" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>AleVoiceApp</string>
+  <key>CFBundleIdentifier</key>
+  <string>dev.alevoice.AleVoiceApp</string>
+  <key>CFBundleName</key>
+  <string>AleVoiceApp</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>14.0</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>AleVoice needs microphone access to record local dictation audio for transcription.</string>
+</dict>
+</plist>
+PLIST
+
+if command -v codesign >/dev/null 2>&1; then
+  codesign --force --sign - "$bundle_path" >/dev/null
+fi
+
+if [[ $# -gt 0 ]]; then
+  if [[ $# -eq 1 && "${1:-}" == "--print-bundle-path" ]]; then
+    printf '%s\n' "$bundle_path"
+    exit 0
+  fi
+
+  printf 'usage: %s [--print-bundle-path]\n' "$0" >&2
+  exit 64
+fi
+
+open -n "$bundle_path"

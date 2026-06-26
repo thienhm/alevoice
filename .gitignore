@@ -7,6 +7,9 @@ harness.db-shm
 target/
 dist/
 
+# Swift Package Manager build output.
+.build/
+
 # Downloaded Harness CLI binary for installed project instances.
 scripts/bin/harness-cli
 scripts/bin/harness-cli.exe
@@ -15,3 +18,6 @@ scripts/bin/harness-cli.exe
 tools/benchmarks/stt_models.json
 tmp/funasr-runtime/
 tmp/stt-models/
+
+# Local native speech-engine config override.
+Config/speech-engine.json
