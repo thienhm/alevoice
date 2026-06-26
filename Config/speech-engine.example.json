@@ -1,0 +1,8 @@
+{
+  "engine": "funasr",
+  "funasr": {
+    "binaryPath": "/absolute/path/to/llama-funasr-sensevoice",
+    "modelPath": "/absolute/path/to/sensevoice-small-f16.gguf",
+    "defaultMode": "auto"
+  }
+}

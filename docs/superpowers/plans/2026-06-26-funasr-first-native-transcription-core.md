@@ -12,7 +12,7 @@
 
 ## File Structure
 
-- Create `Package.swift` for package, library, CLI, app, and test targets.
+- Create `Package.swift` for `AleVoiceCore` library and tests.
 - Create `Config/speech-engine.example.json` for engine selection and local runtime paths.
 - Modify `.gitignore` to keep local `Config/speech-engine.json` out of git.
 - Create `Sources/AleVoiceCore/SpeechEngine.swift` for shared request/result/error types and protocol boundary.
@@ -103,17 +103,10 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "AleVoiceCore", targets: ["AleVoiceCore"]),
-        .library(name: "AleVoiceAppUI", targets: ["AleVoiceAppUI"]),
-        .executable(name: "AleVoiceCLI", targets: ["AleVoiceCLI"]),
-        .executable(name: "AleVoiceApp", targets: ["AleVoiceApp"]),
     ],
     targets: [
         .target(name: "AleVoiceCore"),
-        .target(name: "AleVoiceAppUI", dependencies: ["AleVoiceCore"]),
-        .executableTarget(name: "AleVoiceCLI", dependencies: ["AleVoiceCore"]),
-        .executableTarget(name: "AleVoiceApp", dependencies: ["AleVoiceCore", "AleVoiceAppUI"]),
         .testTarget(name: "AleVoiceCoreTests", dependencies: ["AleVoiceCore"]),
-        .testTarget(name: "AleVoiceAppUITests", dependencies: ["AleVoiceAppUI", "AleVoiceCore"]),
     ]
 )
 ```
@@ -394,6 +387,7 @@ git commit -m "feat: add funasr speech backend"
 ### Task 3: Add Coordinator And CLI Smoke Runner
 
 **Files:**
+- Modify: `Package.swift`
 - Create: `Sources/AleVoiceCore/TranscriptionCoordinator.swift`
 - Create: `Sources/AleVoiceCLI/main.swift`
 - Test: `Tests/AleVoiceCoreTests/TranscriptionCoordinatorTests.swift`
@@ -436,6 +430,15 @@ Run: `swift test --filter TranscriptionCoordinatorTests`
 Expected: FAIL with missing `TranscriptionCoordinator` or `StubEngine`.
 
 - [ ] **Step 3: Write coordinator and CLI entrypoint**
+
+```swift
+// Package.swift additions
+// Add executable product:
+.executable(name: "AleVoiceCLI", targets: ["AleVoiceCLI"])
+
+// Add executable target:
+.executableTarget(name: "AleVoiceCLI", dependencies: ["AleVoiceCore"])
+```
 
 ```swift
 // Sources/AleVoiceCore/TranscriptionCoordinator.swift
@@ -525,13 +528,14 @@ Expected: prints `engine=funasr`, `latency_ms=<number>`, then transcript text.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Sources/AleVoiceCore/TranscriptionCoordinator.swift Sources/AleVoiceCLI/main.swift Tests/AleVoiceCoreTests/TranscriptionCoordinatorTests.swift
+git add Package.swift Sources/AleVoiceCore/TranscriptionCoordinator.swift Sources/AleVoiceCLI/main.swift Tests/AleVoiceCoreTests/TranscriptionCoordinatorTests.swift
 git commit -m "feat: add native transcription coordinator and cli"
 ```
 
 ### Task 4: Add Native Debug View Model And Minimal SwiftUI Shell
 
 **Files:**
+- Modify: `Package.swift`
 - Create: `Sources/AleVoiceAppUI/TranscriptionDebugViewModel.swift`
 - Create: `Sources/AleVoiceAppUI/ContentView.swift`
 - Create: `Sources/AleVoiceApp/AleVoiceApp.swift`
@@ -575,6 +579,18 @@ Run: `swift test --filter TranscriptionDebugViewModelTests`
 Expected: FAIL with missing `TranscriptionDebugViewModel`.
 
 - [ ] **Step 3: Write debug view model and app shell**
+
+```swift
+// Package.swift additions
+// Add products:
+.library(name: "AleVoiceAppUI", targets: ["AleVoiceAppUI"])
+.executable(name: "AleVoiceApp", targets: ["AleVoiceApp"])
+
+// Add targets:
+.target(name: "AleVoiceAppUI", dependencies: ["AleVoiceCore"])
+.executableTarget(name: "AleVoiceApp", dependencies: ["AleVoiceCore", "AleVoiceAppUI"])
+.testTarget(name: "AleVoiceAppUITests", dependencies: ["AleVoiceAppUI", "AleVoiceCore"])
+```
 
 ```swift
 // Sources/AleVoiceAppUI/TranscriptionDebugViewModel.swift
@@ -681,7 +697,7 @@ Expected: app launches, button click runs sample transcription, transcript and l
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Sources/AleVoiceApp/AleVoiceApp.swift Sources/AleVoiceAppUI/ContentView.swift Sources/AleVoiceAppUI/TranscriptionDebugViewModel.swift Tests/AleVoiceAppUITests/TranscriptionDebugViewModelTests.swift
+git add Package.swift Sources/AleVoiceApp/AleVoiceApp.swift Sources/AleVoiceAppUI/ContentView.swift Sources/AleVoiceAppUI/TranscriptionDebugViewModel.swift Tests/AleVoiceAppUITests/TranscriptionDebugViewModelTests.swift
 git commit -m "feat: add native debug shell for funasr transcription"
 ```
 
