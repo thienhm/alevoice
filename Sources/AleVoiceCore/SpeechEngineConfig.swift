@@ -35,5 +35,10 @@ public struct SpeechEngineSettings: Codable, Equatable, Sendable {
         guard !funasr.modelPath.isEmpty else {
             throw SpeechEngineError.invalidConfiguration("funasr modelPath must be non-empty")
         }
+        guard funasr.defaultMode == .auto else {
+            throw SpeechEngineError.invalidConfiguration(
+                "funasr runtime only supports defaultMode 'auto' in current local runtime"
+            )
+        }
     }
 }

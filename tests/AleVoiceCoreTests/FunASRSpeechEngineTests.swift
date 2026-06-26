@@ -2,7 +2,25 @@ import XCTest
 @testable import AleVoiceCore
 
 final class FunASRSpeechEngineTests: XCTestCase {
-    func test_buildCommandMatchesBenchmarkShape() throws {
+    func test_buildCommandMatchesBenchmarkShapeForAutoMode() throws {
+        let config = EnginePathConfig(
+            binaryPath: "/tmp/funasr",
+            modelPath: "/tmp/funasr.gguf",
+            defaultMode: .auto
+        )
+        let engine = FunASRSpeechEngine(config: config, runner: FakeRunner())
+        let request = SpeechTranscriptionRequest(
+            audioURL: URL(fileURLWithPath: "/tmp/en-001.wav"),
+            mode: .auto
+        )
+
+        XCTAssertEqual(
+            try engine.buildCommand(for: request),
+            ["/tmp/funasr", "-m", "/tmp/funasr.gguf", "-a", "/tmp/en-001.wav"]
+        )
+    }
+
+    func test_buildCommandRejectsExplicitLanguageModeWhenRuntimeLacksFlag() throws {
         let config = EnginePathConfig(
             binaryPath: "/tmp/funasr",
             modelPath: "/tmp/funasr.gguf",
@@ -14,10 +32,12 @@ final class FunASRSpeechEngineTests: XCTestCase {
             mode: .en
         )
 
-        XCTAssertEqual(
-            engine.buildCommand(for: request),
-            ["/tmp/funasr", "-m", "/tmp/funasr.gguf", "-a", "/tmp/en-001.wav"]
-        )
+        XCTAssertThrowsError(try engine.buildCommand(for: request)) { error in
+            XCTAssertEqual(
+                error as? SpeechEngineError,
+                .invalidConfiguration("funasr runtime does not support explicit language mode 'en'")
+            )
+        }
     }
 
     func test_transcribeStripsTimestampWrapperAndReturnsLatency() throws {

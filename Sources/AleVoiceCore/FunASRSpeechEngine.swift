@@ -9,8 +9,9 @@ public final class FunASRSpeechEngine: SpeechEngine {
         self.runner = runner
     }
 
-    public func buildCommand(for request: SpeechTranscriptionRequest) -> [String] {
-        [
+    public func buildCommand(for request: SpeechTranscriptionRequest) throws -> [String] {
+        try ensureModeSupported(request.mode)
+        return [
             config.binaryPath,
             "-m",
             config.modelPath,
@@ -20,7 +21,7 @@ public final class FunASRSpeechEngine: SpeechEngine {
     }
 
     public func transcribe(_ request: SpeechTranscriptionRequest) throws -> SpeechTranscriptionResult {
-        let output = try runner.run(command: buildCommand(for: request))
+        let output = try runner.run(command: try buildCommand(for: request))
         let transcript = Self.parseTranscript(output.stdout)
         guard !transcript.isEmpty else {
             throw SpeechEngineError.emptyTranscript
@@ -49,5 +50,13 @@ public final class FunASRSpeechEngine: SpeechEngine {
         }
 
         return String(trimmed[transcriptRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func ensureModeSupported(_ mode: SpeechLanguageMode) throws {
+        guard mode == .auto else {
+            throw SpeechEngineError.invalidConfiguration(
+                "funasr runtime does not support explicit language mode '\(mode.rawValue)'"
+            )
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+implemented
 
 ## Lane
 
@@ -71,9 +71,13 @@ When updating durable proof status, use numeric booleans:
 
 ## Evidence
 
-Planned validation commands:
-
-- `swift test`
-- `swift run AleVoiceCLI --config Config/speech-engine.json --audio data/benchmarks/samples/en-001.wav --mode auto`
-- Native debug shell launch plus screenshot/log evidence
-
+- `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test` passed with 24 tests, 0 failures.
+- `swift run AleVoiceCLI --config Config/speech-engine.json --audio data/benchmarks/samples/en-001.wav --mode auto` printed:
+  - `engine=funasr`
+  - `latency_ms=478`
+  - `open terminal and show get status`
+- `swift run AleVoiceCLI --config Config/speech-engine.json --audio data/benchmarks/samples/en-001.wav --mode en` now fails loudly with `invalidConfiguration("funasr runtime does not support explicit language mode 'en'")` instead of silently ignoring mode.
+- `swift run AleVoiceApp` built, launched, received accessibility click on `Transcribe en-001 sample`, and showed:
+  - `366 ms`
+  - `open terminal and show get status`
+- `docs/validation/us-002-funasr-first-native-transcription-core.md`

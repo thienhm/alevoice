@@ -38,6 +38,27 @@ final class SpeechEngineConfigTests: XCTestCase {
         XCTAssertThrowsError(try SpeechEngineSettings.load(from: url))
     }
 
+    func test_loadRejectsUnsupportedFunASRDefaultMode() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("speech-engine-unsupported-mode.json")
+        try """
+        {
+          "engine": "funasr",
+          "funasr": {
+            "binaryPath": "/tmp/funasr",
+            "modelPath": "/tmp/funasr.gguf",
+            "defaultMode": "en"
+          }
+        }
+        """.write(to: url, atomically: true, encoding: .utf8)
+
+        XCTAssertThrowsError(try SpeechEngineSettings.load(from: url)) { error in
+            XCTAssertEqual(
+                error as? SpeechEngineError,
+                .invalidConfiguration("funasr runtime only supports defaultMode 'auto' in current local runtime")
+            )
+        }
+    }
+
     func test_engineKindIsFunASROnlyForInitialNativeCore() {
         XCTAssertNil(SpeechEngineKind(rawValue: "whispercpp"))
     }
