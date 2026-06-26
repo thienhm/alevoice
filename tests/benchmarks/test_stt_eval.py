@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from tools.benchmarks.run_stt_benchmark import benchmark_sample
+from tools.benchmarks.run_stt_benchmark import (
+    benchmark_sample,
+    load_engine_config,
+    run_benchmark,
+)
 from tools.benchmarks.stt_engine_base import EngineConfig, EngineResult
 from tools.benchmarks.stt_engine_funasr import FunASREngine
 from tools.benchmarks.stt_engine_whispercpp import WhisperCppEngine
 from tools.benchmarks.stt_eval import normalize_text, score_transcript
-from tools.benchmarks.summarize_stt_benchmark import summarize_rows
+from tools.benchmarks.summarize_stt_benchmark import summarize_rows, write_report
 
 
 class FakeEngine:
@@ -76,6 +81,96 @@ def test_benchmark_sample_returns_expected_row_fields(tmp_path: Path):
         "latency_ms": 123,
         "exact_match": False,
     }
+
+
+def test_load_engine_config_reads_engine_from_json(tmp_path: Path):
+    config_path = tmp_path / "stt_models.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "whispercpp": {
+                    "binary": "/opt/bin/whisper-cli",
+                    "model": "/opt/models/ggml-base.bin",
+                },
+                "funasr": {
+                    "binary": "/opt/bin/funasr-cli",
+                    "model": "/opt/models/funasr-small",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert load_engine_config(config_path, "whispercpp") == EngineConfig(
+        name="whispercpp",
+        binary="/opt/bin/whisper-cli",
+        model="/opt/models/ggml-base.bin",
+    )
+
+
+def test_run_benchmark_writes_engine_rows_to_json(tmp_path: Path):
+    class RecordingFakeEngine(FakeEngine):
+        def transcribe(self, audio_path: Path, mode: str) -> EngineResult:
+            return EngineResult(transcript=f"{audio_path.stem}-{mode}", latency_ms=321)
+
+    rows = [
+        {
+            "id": "en-001",
+            "audio_path": str(tmp_path / "sample-en.wav"),
+            "reference": "sample-en-auto",
+            "mode": "auto",
+            "category": "english",
+        },
+        {
+            "id": "vi-001",
+            "audio_path": str(tmp_path / "sample-vi.wav"),
+            "reference": "wrong-reference",
+            "mode": "vi",
+            "category": "vietnamese",
+        },
+    ]
+
+    output_path = run_benchmark(RecordingFakeEngine(), rows, tmp_path / "out")
+
+    assert output_path == tmp_path / "out" / "fake.json"
+    assert json.loads(output_path.read_text(encoding="utf-8")) == [
+        {
+            "sample_id": "en-001",
+            "engine": "fake",
+            "category": "english",
+            "mode": "auto",
+            "reference": "sample-en-auto",
+            "transcript": "sample-en-auto",
+            "latency_ms": 321,
+            "exact_match": True,
+        },
+        {
+            "sample_id": "vi-001",
+            "engine": "fake",
+            "category": "vietnamese",
+            "mode": "vi",
+            "reference": "wrong-reference",
+            "transcript": "sample-vi-vi",
+            "latency_ms": 321,
+            "exact_match": False,
+        },
+    ]
+
+
+def test_write_report_writes_summary_and_pending_recommendation(tmp_path: Path):
+    report_path = tmp_path / "benchmark-report.md"
+    summary = {
+        "whispercpp": {"avg_latency_ms": 1100.0, "exact_match_rate": 0.75},
+        "funasr": {"avg_latency_ms": 900.0, "exact_match_rate": 0.5},
+    }
+
+    write_report(summary, report_path)
+
+    content = report_path.read_text(encoding="utf-8")
+    assert "## Aggregate Summary" in content
+    assert "| whispercpp | 1100.0 | 0.75 |" in content
+    assert "| funasr | 900.0 | 0.50 |" in content
+    assert "Recommendation: pending measured review." in content
 
 
 @pytest.mark.parametrize(

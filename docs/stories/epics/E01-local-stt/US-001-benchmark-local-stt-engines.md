@@ -67,17 +67,24 @@ When updating durable proof status, use numeric booleans:
 
 ## Evidence
 
-Task 5 summary reporting:
+Task 6 CLI enablement:
 
+- `tools/benchmarks/run_stt_benchmark.py`
 - `tools/benchmarks/summarize_stt_benchmark.py`
+- `.venv/bin/python -m pytest tests/benchmarks/test_stt_eval.py -k "load_engine_config or run_benchmark or write_report" -v`
 - `.venv/bin/python -m pytest tests/benchmarks/test_stt_eval.py -v`
 - `.venv/bin/python -m pytest tests/benchmarks -v`
 - `docs/validation/us-001-stt-engine-benchmark.md`
 
-Planned benchmark commands and artifacts:
+Executable benchmark commands once local config and binaries exist:
 
-- `python3 tools/benchmarks/run_stt_benchmark.py --engine whispercpp --corpus data/benchmarks/stt_corpus.json`
-- `python3 tools/benchmarks/run_stt_benchmark.py --engine funasr --corpus data/benchmarks/stt_corpus.json`
-- `python3 tools/benchmarks/summarize_stt_benchmark.py --input-dir tmp/stt-benchmarks`
+- `python3 tools/benchmarks/run_stt_benchmark.py --engine whispercpp --corpus data/benchmarks/stt_corpus.json --config tools/benchmarks/stt_models.json --output-dir tmp/stt-benchmarks`
+- `python3 tools/benchmarks/run_stt_benchmark.py --engine funasr --corpus data/benchmarks/stt_corpus.json --config tools/benchmarks/stt_models.json --output-dir tmp/stt-benchmarks`
+- `python3 tools/benchmarks/summarize_stt_benchmark.py --input-dir tmp/stt-benchmarks --report docs/validation/us-001-stt-engine-benchmark.md`
 - `tmp/stt-benchmarks/*.json`
 - `docs/validation/us-001-stt-engine-benchmark.md`
+
+Current blocker for measured execution:
+
+- `tools/benchmarks/stt_models.json` is absent.
+- `whisper-cli` and `funasr-cli` are not on `PATH`.
