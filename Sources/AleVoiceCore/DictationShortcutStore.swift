@@ -2,7 +2,7 @@ import Foundation
 
 public protocol DictationShortcutStore: Sendable {
     func load() -> DictationShortcut?
-    func save(_ shortcut: DictationShortcut?) throws
+    func save(_ shortcut: DictationShortcut) throws
 }
 
 public struct UserDefaultsDictationShortcutStore: DictationShortcutStore, @unchecked Sendable {
@@ -24,11 +24,7 @@ public struct UserDefaultsDictationShortcutStore: DictationShortcutStore, @unche
         return try? JSONDecoder().decode(DictationShortcut.self, from: data)
     }
 
-    public func save(_ shortcut: DictationShortcut?) throws {
-        guard let shortcut else {
-            userDefaults.removeObject(forKey: storageKey)
-            return
-        }
+    public func save(_ shortcut: DictationShortcut) throws {
         let data = try JSONEncoder().encode(shortcut)
         userDefaults.set(data, forKey: storageKey)
     }
