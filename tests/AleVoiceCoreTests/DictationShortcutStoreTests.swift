@@ -20,4 +20,21 @@ final class DictationShortcutStoreTests: XCTestCase {
 
         XCTAssertNil(store.load())
     }
+
+    func test_loadReturnsNilForInvalidShortcutPayload() {
+        let defaults = UserDefaults(suiteName: #function)!
+        defaults.removePersistentDomain(forName: #function)
+        defaults.set(
+            Data("""
+            {
+              "modifiers": 0,
+              "primaryKey": { "keyCode": 49, "displayName": "Space" }
+            }
+            """.utf8),
+            forKey: "dictationShortcut"
+        )
+        let store = UserDefaultsDictationShortcutStore(userDefaults: defaults)
+
+        XCTAssertNil(store.load())
+    }
 }

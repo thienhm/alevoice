@@ -34,8 +34,18 @@ public struct DictationShortcut: Codable, Equatable, Sendable {
         public let displayName: String
 
         public init?(keyCode: UInt16) {
-            guard let displayName = Self.supportedKeys[keyCode] else {
+            guard let displayName = Self.displayName(for: keyCode) else {
                 return nil
+            }
+            self.keyCode = keyCode
+            self.displayName = displayName
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let keyCode = try container.decode(UInt16.self, forKey: .keyCode)
+            guard let displayName = Self.displayName(for: keyCode) else {
+                throw DictationShortcutError.unsupportedPrimaryKey(keyCode)
             }
             self.keyCode = keyCode
             self.displayName = displayName
@@ -43,6 +53,15 @@ public struct DictationShortcut: Codable, Equatable, Sendable {
 
         public static let space = PrimaryKey(keyCode: 49)!
         public static let keyD = PrimaryKey(keyCode: 2)!
+
+        private enum CodingKeys: String, CodingKey {
+            case keyCode
+            case displayName
+        }
+
+        private static func displayName(for keyCode: UInt16) -> String? {
+            supportedKeys[keyCode]
+        }
 
         private static let supportedKeys: [UInt16: String] = [
             49: "Space",
@@ -55,6 +74,13 @@ public struct DictationShortcut: Codable, Equatable, Sendable {
 
     public let modifiers: ModifierSet
     public let primaryKey: PrimaryKey?
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let modifiers = try container.decode(ModifierSet.self, forKey: .modifiers)
+        let primaryKey = try container.decodeIfPresent(PrimaryKey.self, forKey: .primaryKey)
+        try self.init(modifiers: modifiers, primaryKey: primaryKey)
+    }
 
     public init(modifiers: ModifierSet, primaryKey: PrimaryKey?) throws {
         guard !modifiers.isEmpty else {
@@ -75,5 +101,10 @@ public struct DictationShortcut: Codable, Equatable, Sendable {
             parts.append(primaryKey.displayName)
         }
         return parts.joined(separator: "+")
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case modifiers
+        case primaryKey
     }
 }
