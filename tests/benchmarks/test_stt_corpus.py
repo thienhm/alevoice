@@ -2,7 +2,85 @@ from pathlib import Path
 
 import pytest
 
+from tools.benchmarks.stt_engine_base import EngineConfig
+from tools.benchmarks.stt_engine_funasr import FunASREngine
+from tools.benchmarks.stt_engine_whispercpp import WhisperCppEngine
 from tools.benchmarks.stt_corpus import load_corpus
+
+
+def test_engine_config_requires_binary_and_model_paths():
+    config = EngineConfig(name="whispercpp", binary="/tmp/whisper", model="/tmp/model.bin")
+
+    assert config.name == "whispercpp"
+    assert config.binary.endswith("whisper")
+
+
+def test_whispercpp_build_command_includes_language_mode():
+    engine = WhisperCppEngine(
+        EngineConfig(name="whispercpp", binary="/tmp/whisper", model="/tmp/model.bin")
+    )
+
+    command = engine.build_command(Path("sample.wav"), "vi")
+
+    assert command == [
+        "/tmp/whisper",
+        "--model",
+        "/tmp/model.bin",
+        "--file",
+        "sample.wav",
+        "--language",
+        "vi",
+    ]
+
+
+def test_whispercpp_build_command_omits_language_for_auto_mode():
+    engine = WhisperCppEngine(
+        EngineConfig(name="whispercpp", binary="/tmp/whisper", model="/tmp/model.bin")
+    )
+
+    command = engine.build_command(Path("sample.wav"), "auto")
+
+    assert command == [
+        "/tmp/whisper",
+        "--model",
+        "/tmp/model.bin",
+        "--file",
+        "sample.wav",
+    ]
+
+
+def test_funasr_build_command_includes_language_mode():
+    engine = FunASREngine(
+        EngineConfig(name="funasr", binary="/tmp/funasr", model="/tmp/funasr-model")
+    )
+
+    command = engine.build_command(Path("sample.wav"), "en")
+
+    assert command == [
+        "/tmp/funasr",
+        "--model",
+        "/tmp/funasr-model",
+        "--audio",
+        "sample.wav",
+        "--language",
+        "en",
+    ]
+
+
+def test_funasr_build_command_omits_language_for_auto_mode():
+    engine = FunASREngine(
+        EngineConfig(name="funasr", binary="/tmp/funasr", model="/tmp/funasr-model")
+    )
+
+    command = engine.build_command(Path("sample.wav"), "auto")
+
+    assert command == [
+        "/tmp/funasr",
+        "--model",
+        "/tmp/funasr-model",
+        "--audio",
+        "sample.wav",
+    ]
 
 
 def test_load_corpus_rejects_missing_category(tmp_path):
