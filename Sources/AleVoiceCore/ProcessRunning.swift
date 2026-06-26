@@ -5,7 +5,7 @@ import Darwin
 import Glibc
 #endif
 
-public struct ProcessOutput: Equatable {
+public struct ProcessOutput: Equatable, Sendable {
     public let stdout: String
     public let stderr: String
     public let latencyMs: Int
@@ -17,11 +17,11 @@ public struct ProcessOutput: Equatable {
     }
 }
 
-public protocol ProcessRunning {
+public protocol ProcessRunning: Sendable {
     func run(command: [String]) throws -> ProcessOutput
 }
 
-public struct SystemProcessRunner: ProcessRunning {
+public struct SystemProcessRunner: ProcessRunning, Sendable {
     private let timeoutSeconds: TimeInterval
 
     public init(timeoutSeconds: TimeInterval = 30) {

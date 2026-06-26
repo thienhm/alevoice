@@ -1,16 +1,16 @@
 import Foundation
 
-public enum SpeechEngineKind: String, Codable, Equatable {
+public enum SpeechEngineKind: String, Codable, Equatable, Sendable {
     case funasr
 }
 
-public enum SpeechLanguageMode: String, Codable, Equatable {
+public enum SpeechLanguageMode: String, Codable, Equatable, Sendable {
     case auto
     case en
     case vi
 }
 
-public struct SpeechTranscriptionRequest: Equatable {
+public struct SpeechTranscriptionRequest: Equatable, Sendable {
     public let audioURL: URL
     public let mode: SpeechLanguageMode
 
@@ -20,7 +20,7 @@ public struct SpeechTranscriptionRequest: Equatable {
     }
 }
 
-public struct SpeechTranscriptionResult: Equatable {
+public struct SpeechTranscriptionResult: Equatable, Sendable {
     public let engine: SpeechEngineKind
     public let modelIdentifier: String
     public let transcript: String
@@ -39,12 +39,12 @@ public struct SpeechTranscriptionResult: Equatable {
     }
 }
 
-public enum SpeechEngineError: Error, Equatable {
+public enum SpeechEngineError: Error, Equatable, Sendable {
     case invalidConfiguration(String)
     case processFailure(String)
     case emptyTranscript
 }
 
-public protocol SpeechEngine {
+public protocol SpeechEngine: Sendable {
     func transcribe(_ request: SpeechTranscriptionRequest) throws -> SpeechTranscriptionResult
 }

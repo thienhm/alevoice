@@ -117,7 +117,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
     }
 }
 
-private final class StubEngine: SpeechEngine {
+private final class StubEngine: @unchecked Sendable, SpeechEngine {
     let result: SpeechTranscriptionResult
     private(set) var lastRequest: SpeechTranscriptionRequest?
 

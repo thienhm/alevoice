@@ -1,6 +1,6 @@
 import Foundation
 
-public struct EnginePathConfig: Codable, Equatable {
+public struct EnginePathConfig: Codable, Equatable, Sendable {
     public let binaryPath: String
     public let modelPath: String
     public let defaultMode: SpeechLanguageMode
@@ -12,7 +12,7 @@ public struct EnginePathConfig: Codable, Equatable {
     }
 }
 
-public struct SpeechEngineSettings: Codable, Equatable {
+public struct SpeechEngineSettings: Codable, Equatable, Sendable {
     public let engine: SpeechEngineKind
     public let funasr: EnginePathConfig
 
