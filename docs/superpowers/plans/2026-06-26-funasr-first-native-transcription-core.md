@@ -352,10 +352,12 @@ public final class FunASRSpeechEngine: SpeechEngine {
 
     static func parseTranscript(_ stdout: String) -> String {
         let trimmed = stdout.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let closingBracket = trimmed.lastIndex(of: "]") else {
-            return trimmed
-        }
-        return trimmed[trimmed.index(after: closingBracket)...].trimmingCharacters(in: .whitespaces)
+        let timestampPattern = #"^\[\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3}\]\s*"#
+        return trimmed.replacingOccurrences(
+            of: timestampPattern,
+            with: "",
+            options: .regularExpression
+        )
     }
 }
 ```
