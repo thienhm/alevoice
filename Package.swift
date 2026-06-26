@@ -8,12 +8,17 @@ let package = Package(
     ],
     products: [
         .library(name: "AleVoiceCore", targets: ["AleVoiceCore"]),
+        .executable(name: "AleVoiceCLI", targets: ["AleVoiceCLI"]),
     ],
     targets: [
         .target(name: "AleVoiceCore"),
+        .executableTarget(
+            name: "AleVoiceCLI",
+            dependencies: ["AleVoiceCore"]
+        ),
         .testTarget(
             name: "AleVoiceCoreTests",
-            dependencies: ["AleVoiceCore"],
+            dependencies: ["AleVoiceCore", "AleVoiceCLI"],
             path: "tests/AleVoiceCoreTests"
         ),
     ]
