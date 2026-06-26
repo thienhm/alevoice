@@ -18,8 +18,12 @@ from tools.benchmarks.stt_eval import score_transcript
 def benchmark_sample(
     engine: SpeechBenchmarkEngine,
     sample: dict[str, str],
+    *,
+    corpus_dir: Path | None = None,
 ) -> dict[str, object]:
     audio_path = Path(sample["audio_path"])
+    if corpus_dir is not None and not audio_path.is_absolute():
+        audio_path = corpus_dir / audio_path
     result = engine.transcribe(audio_path, sample["mode"])
     score = score_transcript(sample["reference"], result.transcript)
     return {
@@ -69,8 +73,10 @@ def run_benchmark(
     engine: SpeechBenchmarkEngine,
     corpus_rows: list[dict[str, str]],
     output_dir: Path,
+    *,
+    corpus_dir: Path | None = None,
 ) -> Path:
-    rows = [benchmark_sample(engine, sample) for sample in corpus_rows]
+    rows = [benchmark_sample(engine, sample, corpus_dir=corpus_dir) for sample in corpus_rows]
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{engine.config.name}.json"
     output_path.write_text(json.dumps(rows, indent=2), encoding="utf-8")
@@ -91,7 +97,7 @@ def main() -> int:
     config = load_engine_config(args.config, args.engine)
     engine = build_engine(args.engine, config)
     corpus_rows = load_corpus(args.corpus)
-    output_path = run_benchmark(engine, corpus_rows, args.output_dir)
+    output_path = run_benchmark(engine, corpus_rows, args.output_dir, corpus_dir=args.corpus.parent)
     print(output_path)
     return 0
 

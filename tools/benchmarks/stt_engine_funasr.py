@@ -13,14 +13,12 @@ class FunASREngine:
     config: EngineConfig
 
     def build_command(self, audio_path: Path, mode: str) -> list[str]:
-        mode_args = [] if mode == "auto" else ["--language", mode]
         return [
             self.config.binary,
-            "--model",
+            "-m",
             self.config.model,
-            "--audio",
+            "-a",
             str(audio_path),
-            *mode_args,
         ]
 
     @staticmethod

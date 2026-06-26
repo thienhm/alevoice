@@ -1,0 +1,42 @@
+[
+  {
+    "sample_id": "en-001",
+    "engine": "funasr",
+    "category": "english",
+    "mode": "auto",
+    "reference": "open terminal and show git status",
+    "transcript": "open terminal and show get status",
+    "latency_ms": 642,
+    "exact_match": false
+  },
+  {
+    "sample_id": "vi-001",
+    "engine": "funasr",
+    "category": "vietnamese",
+    "mode": "vi",
+    "reference": "mo terminal va hien thi git status",
+    "transcript": "moto status",
+    "latency_ms": 138,
+    "exact_match": false
+  },
+  {
+    "sample_id": "mix-001",
+    "engine": "funasr",
+    "category": "mixed_vi_en",
+    "mode": "auto",
+    "reference": "mo Slack va draft release notes cho sprint nay",
+    "transcript": "moose black band ra release nocho three nine",
+    "latency_ms": 188,
+    "exact_match": false
+  },
+  {
+    "sample_id": "fmt-001",
+    "engine": "funasr",
+    "category": "formatting_command",
+    "mode": "en",
+    "reference": "new line bullet benchmark summary colon whisper cpp faster",
+    "transcript": "new line bullet benchmark summary call and whisper cpp faster",
+    "latency_ms": 221,
+    "exact_match": false
+  }
+]

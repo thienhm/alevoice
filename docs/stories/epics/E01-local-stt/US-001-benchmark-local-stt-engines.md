@@ -2,7 +2,7 @@
 
 ## Status
 
-in_progress
+implemented
 
 ## Lane
 
@@ -67,24 +67,22 @@ When updating durable proof status, use numeric booleans:
 
 ## Evidence
 
-Task 6 CLI enablement:
+Task 6 benchmark proof:
 
 - `tools/benchmarks/run_stt_benchmark.py`
 - `tools/benchmarks/summarize_stt_benchmark.py`
-- `.venv/bin/python -m pytest tests/benchmarks/test_stt_eval.py -k "load_engine_config or run_benchmark or write_report" -v`
-- `.venv/bin/python -m pytest tests/benchmarks/test_stt_eval.py -v`
-- `.venv/bin/python -m pytest tests/benchmarks -v`
+- `.venv/bin/python -m pytest tests/benchmarks -v` (24 passed)
+- `.venv/bin/python tools/benchmarks/run_stt_benchmark.py --engine whispercpp --corpus data/benchmarks/stt_corpus.json --config tools/benchmarks/stt_models.json --output-dir tmp/stt-benchmarks`
+- `.venv/bin/python tools/benchmarks/run_stt_benchmark.py --engine funasr --corpus data/benchmarks/stt_corpus.json --config tools/benchmarks/stt_models.json --output-dir tmp/stt-benchmarks`
+- `.venv/bin/python tools/benchmarks/summarize_stt_benchmark.py --input-dir tmp/stt-benchmarks --report docs/validation/us-001-stt-engine-benchmark.md`
+- `tmp/stt-benchmarks/whispercpp.json`
+- `tmp/stt-benchmarks/funasr.json`
 - `docs/validation/us-001-stt-engine-benchmark.md`
 
-Executable benchmark commands once local config and binaries exist:
+Measured benchmark commands and artifacts:
 
-- `python3 tools/benchmarks/run_stt_benchmark.py --engine whispercpp --corpus data/benchmarks/stt_corpus.json --config tools/benchmarks/stt_models.json --output-dir tmp/stt-benchmarks`
-- `python3 tools/benchmarks/run_stt_benchmark.py --engine funasr --corpus data/benchmarks/stt_corpus.json --config tools/benchmarks/stt_models.json --output-dir tmp/stt-benchmarks`
-- `python3 tools/benchmarks/summarize_stt_benchmark.py --input-dir tmp/stt-benchmarks --report docs/validation/us-001-stt-engine-benchmark.md`
-- `tmp/stt-benchmarks/*.json`
-- `docs/validation/us-001-stt-engine-benchmark.md`
-
-Current blocker for measured execution:
-
-- `tools/benchmarks/stt_models.json` is absent.
-- `whisper-cli` and `funasr-cli` are not on `PATH`.
+- `whisper.cpp`: avg latency 441.0 ms, exact-match rate 0.00
+- FunASR SenseVoiceSmall GGUF: avg latency 297.2 ms, exact-match rate 0.00
+- Recommendation: choose `whisper.cpp` for MVP by default because FunASR was
+  faster but did not show material quality improvement on the corpus.
+- Known weak cases are listed in `docs/validation/us-001-stt-engine-benchmark.md`.

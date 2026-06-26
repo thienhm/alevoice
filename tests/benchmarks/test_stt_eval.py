@@ -157,6 +157,28 @@ def test_run_benchmark_writes_engine_rows_to_json(tmp_path: Path):
     ]
 
 
+def test_run_benchmark_resolves_relative_audio_paths_from_corpus_dir(tmp_path: Path):
+    seen_paths: list[Path] = []
+
+    class RecordingFakeEngine(FakeEngine):
+        def transcribe(self, audio_path: Path, mode: str) -> EngineResult:
+            seen_paths.append(audio_path)
+            return EngineResult(transcript="hello", latency_ms=321)
+
+    rows = [
+        {
+            "id": "en-001",
+            "audio_path": "samples/en-001.wav",
+            "reference": "hello",
+            "mode": "auto",
+            "category": "english",
+        },
+    ]
+
+    run_benchmark(RecordingFakeEngine(), rows, tmp_path / "out", corpus_dir=tmp_path / "corpus")
+
+    assert seen_paths == [tmp_path / "corpus" / "samples/en-001.wav"]
+
 def test_write_report_writes_summary_and_pending_recommendation(tmp_path: Path):
     report_path = tmp_path / "benchmark-report.md"
     summary = {
@@ -170,21 +192,25 @@ def test_write_report_writes_summary_and_pending_recommendation(tmp_path: Path):
     assert "## Aggregate Summary" in content
     assert "| whispercpp | 1100.0 | 0.75 |" in content
     assert "| funasr | 900.0 | 0.50 |" in content
-    assert "Recommendation: pending measured review." in content
+    assert "Recommendation: whispercpp." in content
+    assert "FunASR was not materially better" in content
 
 
 @pytest.mark.parametrize(
-    ("engine_cls", "binary_arg"),
+    ("engine_cls", "model_arg", "binary_arg", "parsed_stdout", "result_stdout"),
     [
-        (WhisperCppEngine, "--file"),
-        (FunASREngine, "--audio"),
+        (WhisperCppEngine, "--model", "--file", "hello from engine", "hello from engine"),
+        (FunASREngine, "-m", "-a", "[00:00:00.000 --> 00:00:02.000]   hello from engine", "hello from engine"),
     ],
 )
 def test_engine_parse_transcript_and_transcribe(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     engine_cls: type[WhisperCppEngine] | type[FunASREngine],
+    model_arg: str,
     binary_arg: str,
+    parsed_stdout: str,
+    result_stdout: str,
 ):
     calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
 
@@ -203,14 +229,14 @@ def test_engine_parse_transcript_and_transcribe(
     engine = engine_cls(EngineConfig(name="fake", binary="fake-bin", model="fake-model"))
     result = engine.transcribe(tmp_path / "sample.wav", "auto")
 
-    assert engine.parse_transcript("  hello from engine  \n") == "hello from engine"
-    assert result == EngineResult(transcript="hello from engine", latency_ms=250)
+    assert engine.parse_transcript("[00:00:00.000 --> 00:00:02.000]   hello from engine\n") == parsed_stdout
+    assert result == EngineResult(transcript=result_stdout, latency_ms=250)
     assert calls == [
         (
             (
                 [
                     "fake-bin",
-                    "--model",
+                    model_arg,
                     "fake-model",
                     binary_arg,
                     str(tmp_path / "sample.wav"),

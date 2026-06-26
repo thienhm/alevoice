@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+if __package__ in {None, ""}:
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 
 def summarize_rows(rows: list[dict[str, object]]) -> dict[str, dict[str, float]]:
@@ -19,6 +23,27 @@ def summarize_rows(rows: list[dict[str, object]]) -> dict[str, dict[str, float]]
     }
 
 
+def choose_recommendation(summary: dict[str, dict[str, float]]) -> tuple[str, str]:
+    whisper = summary.get("whispercpp")
+    funasr = summary.get("funasr")
+    if whisper is None or funasr is None:
+        return ("pending", "Both whispercpp and funasr benchmark rows are required.")
+
+    if (
+        funasr["exact_match_rate"] > whisper["exact_match_rate"]
+        and funasr["avg_latency_ms"] <= whisper["avg_latency_ms"]
+    ):
+        return (
+            "funasr",
+            "FunASR is faster and achieved a higher exact-match rate on this corpus.",
+        )
+
+    return (
+        "whispercpp",
+        "Defaulted to whispercpp because FunASR was not materially better on both quality and latency.",
+    )
+
+
 def load_rows(input_dir: Path) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for path in sorted(input_dir.glob("*.json")):
@@ -31,7 +56,25 @@ def load_rows(input_dir: Path) -> list[dict[str, object]]:
     return rows
 
 
-def write_report(summary: dict[str, dict[str, float]], report_path: Path) -> None:
+def collect_weak_cases(rows: list[dict[str, object]]) -> list[str]:
+    weak_cases: list[str] = []
+    for row in rows:
+        if row.get("exact_match"):
+            continue
+        weak_cases.append(
+            f"- {row['engine']} / {row['sample_id']} ({row['category']}): "
+            f"reference=`{row['reference']}` transcript=`{row['transcript']}`"
+        )
+    return weak_cases
+
+
+def write_report(
+    summary: dict[str, dict[str, float]],
+    report_path: Path,
+    *,
+    rows: list[dict[str, object]] | None = None,
+) -> None:
+    recommendation, reason = choose_recommendation(summary)
     lines = [
         "# STT Engine Benchmark Report",
         "",
@@ -50,12 +93,24 @@ def write_report(summary: dict[str, dict[str, float]], report_path: Path) -> Non
             "",
             "## Recommendation",
             "",
-            "Recommendation: pending measured review.",
+            f"Recommendation: {recommendation}.",
             "",
-            "No MVP engine is selected until local benchmark outputs are reviewed.",
+            reason,
             "",
         ]
     )
+
+    weak_cases = collect_weak_cases(rows or [])
+    if weak_cases:
+        lines.extend(
+            [
+                "## Known Weak Cases",
+                "",
+                *weak_cases,
+                "",
+            ]
+        )
+
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -69,9 +124,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = build_parser().parse_args()
-    summary = summarize_rows(load_rows(args.input_dir))
+    rows = load_rows(args.input_dir)
+    summary = summarize_rows(rows)
     if args.report:
-        write_report(summary, args.report)
+        write_report(summary, args.report, rows=rows)
     print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 

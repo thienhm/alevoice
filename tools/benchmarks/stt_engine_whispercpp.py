@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import time
 from dataclasses import dataclass
@@ -25,7 +26,12 @@ class WhisperCppEngine:
 
     @staticmethod
     def parse_transcript(stdout: str) -> str:
-        return stdout.strip()
+        cleaned_lines: list[str] = []
+        for raw_line in stdout.splitlines():
+            line = re.sub(r"^\[[^\]]+\]\s*", "", raw_line).strip()
+            if line:
+                cleaned_lines.append(line)
+        return " ".join(cleaned_lines)
 
     def transcribe(self, audio_path: Path, mode: str) -> EngineResult:
         start = time.perf_counter()

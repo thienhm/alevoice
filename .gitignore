@@ -10,3 +10,8 @@ dist/
 # Downloaded Harness CLI binary for installed project instances.
 scripts/bin/harness-cli
 scripts/bin/harness-cli.exe
+
+# Local benchmark runtime/model config and generated outputs.
+tools/benchmarks/stt_models.json
+tmp/funasr-runtime/
+tmp/stt-models/

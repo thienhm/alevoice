@@ -19,7 +19,7 @@ implemented until tests or validation evidence exist.
 
 | Story | Contract | Unit | Integration | E2E | Platform | Status | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| US-001 | Benchmark `whisper.cpp` vs FunASR on target Mac before native shell build | implemented | planned | no | planned | in_progress | Unit proof: `.venv/bin/python -m pytest tests/benchmarks -v` (23 passed). Pending: measured `whispercpp` and `funasr` runs, `tmp/stt-benchmarks/*.json`, and validation report recommendation in `docs/validation/us-001-stt-engine-benchmark.md`. |
+| US-001 | Benchmark `whisper.cpp` vs FunASR on target Mac before native shell build | implemented | implemented | no | implemented | implemented | `.venv/bin/python -m pytest tests/benchmarks -v` (24 passed); measured `whispercpp` and `funasr` runs wrote `tmp/stt-benchmarks/*.json`; `docs/validation/us-001-stt-engine-benchmark.md` recommends `whisper.cpp` for MVP by default. |
 
 ## Evidence Rules
 

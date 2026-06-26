@@ -58,12 +58,10 @@ def test_funasr_build_command_includes_language_mode():
 
     assert command == [
         "/tmp/funasr",
-        "--model",
+        "-m",
         "/tmp/funasr-model",
-        "--audio",
+        "-a",
         "sample.wav",
-        "--language",
-        "en",
     ]
 
 
@@ -76,9 +74,9 @@ def test_funasr_build_command_omits_language_for_auto_mode():
 
     assert command == [
         "/tmp/funasr",
-        "--model",
+        "-m",
         "/tmp/funasr-model",
-        "--audio",
+        "-a",
         "sample.wav",
     ]
 
