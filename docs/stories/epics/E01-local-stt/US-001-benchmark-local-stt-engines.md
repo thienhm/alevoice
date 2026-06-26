@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+in_progress
 
 ## Lane
 
@@ -66,6 +66,13 @@ When updating durable proof status, use numeric booleans:
   repeated manual work.
 
 ## Evidence
+
+Task 5 summary reporting:
+
+- `tools/benchmarks/summarize_stt_benchmark.py`
+- `.venv/bin/python -m pytest tests/benchmarks/test_stt_eval.py -v`
+- `.venv/bin/python -m pytest tests/benchmarks -v`
+- `docs/validation/us-001-stt-engine-benchmark.md`
 
 Planned benchmark commands and artifacts:
 

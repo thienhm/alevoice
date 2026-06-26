@@ -10,6 +10,7 @@ from tools.benchmarks.stt_engine_base import EngineConfig, EngineResult
 from tools.benchmarks.stt_engine_funasr import FunASREngine
 from tools.benchmarks.stt_engine_whispercpp import WhisperCppEngine
 from tools.benchmarks.stt_eval import normalize_text, score_transcript
+from tools.benchmarks.summarize_stt_benchmark import summarize_rows
 
 
 class FakeEngine:
@@ -28,6 +29,15 @@ def test_score_transcript_returns_exact_match_for_identical_text():
     score = score_transcript("new line", "new line")
     assert score.exact_match is True
     assert score.reference_tokens == 2
+
+
+def test_summarize_rows_reports_average_latency_per_engine():
+    rows = [
+        {"engine": "whispercpp", "latency_ms": 1000, "exact_match": True, "category": "english"},
+        {"engine": "whispercpp", "latency_ms": 1200, "exact_match": False, "category": "english"},
+    ]
+    summary = summarize_rows(rows)
+    assert summary["whispercpp"]["avg_latency_ms"] == 1100
 
 
 def test_benchmark_sample_records_engine_name_and_exact_match(tmp_path: Path):
