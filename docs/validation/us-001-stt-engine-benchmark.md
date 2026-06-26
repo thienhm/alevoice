@@ -23,3 +23,9 @@ Defaulted to whispercpp because FunASR was not materially better on both quality
 - whispercpp / vi-001 (vietnamese): reference=`mo terminal va hien thi git status` transcript=`Mở tơ mì nấu và hiện thị sụp sây tốt.`
 - whispercpp / mix-001 (mixed_vi_en): reference=`mo Slack va draft release notes cho sprint nay` transcript=`Mursorak Vandrak really is not just a finnai.`
 - whispercpp / fmt-001 (formatting_command): reference=`new line bullet benchmark summary colon whisper cpp faster` transcript=`New light bullet benchmark summary, colon whisper CPP faster.`
+
+## Next Step Before Native Shell Work
+
+- Start native macOS shell work with `whisper.cpp` as default engine.
+- Carry the mixed-language and Vietnamese weak cases into later dictation QA.
+- Treat FunASR as optional follow-up, not the MVP default.
