@@ -2,18 +2,24 @@ import AleVoiceCore
 import AppKit
 import Foundation
 
+struct MenuBarPresentation: Equatable {
+    let title: String
+    let isRecordingIndicatorVisible: Bool
+}
+
 @MainActor
 final class MenuBarController {
     private let statusItem: NSStatusItem?
-    private let setTitle: (String) -> Void
+    private let updateShell: (MenuBarPresentation) -> Void
 
     init(
         statusItem: NSStatusItem? = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength),
-        setTitle: ((String) -> Void)? = nil
+        updateShell: ((MenuBarPresentation) -> Void)? = nil
     ) {
         self.statusItem = statusItem
-        self.setTitle = setTitle ?? { [weak statusItem] title in
-            statusItem?.button?.title = title
+        self.updateShell = updateShell ?? { [weak statusItem] presentation in
+            statusItem?.button?.title = presentation.title
+            statusItem?.button?.contentTintColor = presentation.isRecordingIndicatorVisible ? .systemRed : nil
         }
     }
 
@@ -24,17 +30,21 @@ final class MenuBarController {
         inputMonitoringText: String,
         shortcutText: String
     ) {
+        updateShell(Self.presentation(for: state))
+    }
+
+    static func presentation(for state: DictationSessionState) -> MenuBarPresentation {
         switch state {
         case .idle:
-            setTitle("AleVoice")
+            return MenuBarPresentation(title: "AleVoice", isRecordingIndicatorVisible: false)
         case .recording:
-            setTitle("AleVoice • Recording")
+            return MenuBarPresentation(title: "AleVoice • Recording", isRecordingIndicatorVisible: true)
         case .processing:
-            setTitle("AleVoice • Processing")
+            return MenuBarPresentation(title: "AleVoice • Processing", isRecordingIndicatorVisible: false)
         case .success:
-            setTitle("AleVoice • Ready")
+            return MenuBarPresentation(title: "AleVoice • Ready", isRecordingIndicatorVisible: false)
         case .error:
-            setTitle("AleVoice • Error")
+            return MenuBarPresentation(title: "AleVoice • Error", isRecordingIndicatorVisible: false)
         }
     }
 }

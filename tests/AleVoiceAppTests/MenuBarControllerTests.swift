@@ -4,10 +4,14 @@ import AleVoiceCore
 
 final class MenuBarControllerTests: XCTestCase {
     @MainActor
-    func test_menuBarSummaryUsesRecordingState() {
-        var title = ""
+    func test_recordingStateUsesRedRecordingIndicator() {
+        let model = MenuBarShellModel()
         let controller = MenuBarController(
-            setTitle: { title = $0 }
+            statusItem: nil,
+            updateShell: { presentation in
+                model.title = presentation.title
+                model.isRecordingIndicatorVisible = presentation.isRecordingIndicatorVisible
+            }
         )
 
         controller.render(
@@ -18,24 +22,38 @@ final class MenuBarControllerTests: XCTestCase {
             shortcutText: "Dictation shortcut: Control+Space"
         )
 
-        XCTAssertEqual(title, "AleVoice • Recording")
+        XCTAssertEqual(model.title, "AleVoice • Recording")
+        XCTAssertTrue(model.isRecordingIndicatorVisible)
     }
 
     @MainActor
-    func test_menuBarSummaryUsesProcessingState() {
-        var title = ""
-        let controller = MenuBarController(
-            setTitle: { title = $0 }
-        )
+    func test_nonRecordingStatesUseDefaultIndicator() {
+        let states: [DictationSessionState] = [
+            .idle,
+            .processing,
+            .success("done"),
+            .error("failed")
+        ]
 
-        controller.render(
-            state: .processing,
-            microphoneText: "Microphone permission: authorized",
-            accessibilityText: "Accessibility: authorized",
-            inputMonitoringText: "Input Monitoring: authorized",
-            shortcutText: "Dictation shortcut: Control+Space"
-        )
+        for state in states {
+            let model = MenuBarShellModel()
+            let controller = MenuBarController(
+                statusItem: nil,
+                updateShell: { presentation in
+                    model.title = presentation.title
+                    model.isRecordingIndicatorVisible = presentation.isRecordingIndicatorVisible
+                }
+            )
 
-        XCTAssertEqual(title, "AleVoice • Processing")
+            controller.render(
+                state: state,
+                microphoneText: "Microphone permission: authorized",
+                accessibilityText: "Accessibility: authorized",
+                inputMonitoringText: "Input Monitoring: authorized",
+                shortcutText: "Dictation shortcut: Control+Space"
+            )
+
+            XCTAssertFalse(model.isRecordingIndicatorVisible, "Expected default icon for \(state)")
+        }
     }
 }

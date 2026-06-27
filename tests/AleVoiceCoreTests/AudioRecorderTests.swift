@@ -12,6 +12,19 @@ final class AudioRecorderTests: XCTestCase {
         XCTAssertEqual(status, .denied)
     }
 
+    func test_requestMicrophonePermissionReadsDriverRequestStatus() async throws {
+        let recorder = AudioRecorder(
+            driver: FakeAudioRecordingDriver(
+                permissionStatus: .notDetermined,
+                requestedPermissionStatus: .authorized
+            )
+        )
+
+        let status = await recorder.requestMicrophonePermission()
+
+        XCTAssertEqual(status, .authorized)
+    }
+
     func test_startThenStopWritesTemporaryWAVAndReturnsEngineReadyURL() async throws {
         let driver = FakeAudioRecordingDriver()
         let recorder = AudioRecorder(driver: driver)
@@ -187,6 +200,7 @@ private final class FakeAudioRecordingDriver: @unchecked Sendable, AudioRecordin
     var startError: Error?
     var stopError: Error?
     var permissionStatus: MicrophonePermissionStatus
+    var requestedPermissionStatus: MicrophonePermissionStatus
     var permissionContinuationMode: PermissionContinuationMode
     private(set) var startedURLs: [URL] = []
     private(set) var stopCallCount = 0
@@ -199,6 +213,7 @@ private final class FakeAudioRecordingDriver: @unchecked Sendable, AudioRecordin
         startError: Error? = nil,
         stopError: Error? = nil,
         permissionStatus: MicrophonePermissionStatus = .authorized,
+        requestedPermissionStatus: MicrophonePermissionStatus? = nil,
         permissionContinuationMode: PermissionContinuationMode = .immediate
     ) {
         self.permissionGranted = permissionGranted
@@ -207,11 +222,16 @@ private final class FakeAudioRecordingDriver: @unchecked Sendable, AudioRecordin
         self.startError = startError
         self.stopError = stopError
         self.permissionStatus = permissionStatus
+        self.requestedPermissionStatus = requestedPermissionStatus ?? (permissionGranted ? .authorized : .denied)
         self.permissionContinuationMode = permissionContinuationMode
     }
 
     func microphonePermissionStatus() async -> MicrophonePermissionStatus {
         permissionStatus
+    }
+
+    func requestMicrophonePermission() async -> MicrophonePermissionStatus {
+        requestedPermissionStatus
     }
 
     func requestRecordPermission() async -> Bool {

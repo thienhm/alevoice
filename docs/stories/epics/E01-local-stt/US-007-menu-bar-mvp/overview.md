@@ -16,7 +16,8 @@ dictation core:
 The current product shape is still incomplete for MVP:
 
 - the app launches as a regular app window instead of a resident menu bar app
-- there is no overlay feedback while dictating
+- recording feedback still needs to move from floating overlay to menu bar
+  waveform tint
 - forced language modes remain exposed even though the current FunASR runtime
   does not support explicit `en` or `vi`
 - formatting commands are not normalized before paste
@@ -31,7 +32,9 @@ AleVoice should ship as a local menu bar MVP:
 - resident macOS menu bar app
 - settings/debug window opened from the menu bar
 - Auto-only dictation path for MVP
-- tiny overlay for recording, processing, success, and error states
+- red menu bar waveform icon while recording
+- no floating overlay for recording, processing, success, or error states
+- copyable last-error action from the menu and selectable settings error text
 - deterministic formatting normalization before paste
 - completed manual paste proof in focused text fields
 - README aligned with actual AleVoice product and development workflow

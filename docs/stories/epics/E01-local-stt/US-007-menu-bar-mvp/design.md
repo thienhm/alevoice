@@ -44,9 +44,11 @@ No network API is involved.
 Desktop/UI contracts change:
 
 - menu bar item shows current app state
+- menu bar waveform icon turns red only while recording
 - menu menu shows permissions, shortcut, open settings, and quit actions
-- overlay window reflects current session state without stealing focus
+- menu exposes a copy action for the last error when an error exists
 - settings/debug window remains available as a secondary surface
+- settings/debug window keeps error text selectable
 
 ## Data Model
 
@@ -61,14 +63,15 @@ Story and validation evidence should be updated in the Harness durable layer.
 - `AleVoiceApp` should behave as a resident menu bar utility instead of a
   regular foreground-only app.
 - A settings/debug window remains available on demand.
-- Overlay is implemented as a small floating non-activating AppKit panel.
+- Floating overlay feedback is disabled for recording, processing, success, and
+  error states; the menu bar icon is the recording feedback surface.
 - Forced language picker should be removed or collapsed away from the MVP flow
   so the primary user path is Auto-only.
 
 ## Observability
 
 - Continue to surface transcript, latency, and latest error in the settings
-  window for local debugging.
+  window for local debugging, with error text selectable for copying.
 - Record story evidence and validation notes for the new menu bar MVP slice.
 
 ## Alternatives Considered

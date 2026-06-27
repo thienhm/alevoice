@@ -1,4 +1,5 @@
 import AleVoiceAppUI
+import AleVoiceCore
 import AppKit
 import SwiftUI
 
@@ -20,6 +21,13 @@ struct MenuBarMenuView: View {
                 .font(.system(size: 11))
         }
         .padding(.bottom, 6)
+
+        if let errorMessage = lastErrorMessage(from: viewModel.sessionState) {
+            Button("Copy Last Error") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(errorMessage, forType: .string)
+            }
+        }
 
         Divider()
 
@@ -47,4 +55,12 @@ struct MenuBarMenuView: View {
             return "Error: \(message)"
         }
     }
+}
+
+@MainActor
+func lastErrorMessage(from state: DictationSessionState) -> String? {
+    guard case .error(let message) = state else {
+        return nil
+    }
+    return message
 }

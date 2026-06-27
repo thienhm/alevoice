@@ -12,11 +12,17 @@ binary_path="$repo_root/.build/debug/AleVoiceApp"
 bundle_path="$repo_root/.build/debug/AleVoiceApp.app"
 contents_path="$bundle_path/Contents"
 macos_path="$contents_path/MacOS"
+resources_path="$contents_path/Resources"
 
 mkdir -p "$macos_path"
 rm -f "$macos_path/AleVoiceApp"
 cp "$binary_path" "$macos_path/AleVoiceApp"
 chmod +x "$macos_path/AleVoiceApp"
+
+rm -rf "$resources_path/Config" "$resources_path/data"
+mkdir -p "$resources_path/Config" "$resources_path/data/benchmarks"
+cp -R "$repo_root/Config/." "$resources_path/Config/"
+cp -R "$repo_root/data/benchmarks/samples" "$resources_path/data/benchmarks/samples"
 
 cat > "$contents_path/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

@@ -32,6 +32,20 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_requestMicrophonePermissionUpdatesStatusText() async throws {
+        let viewModel = TranscriptionDebugViewModel(
+            requestMicrophonePermission: { .authorized },
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+
+        await viewModel.requestMicrophonePermission()
+
+        XCTAssertEqual(viewModel.permissionStatusText, "Microphone permission: authorized")
+    }
+
+    @MainActor
     func test_startRecordingUpdatesRecordingState() async throws {
         let probe = RecordingProbe()
         let viewModel = TranscriptionDebugViewModel(

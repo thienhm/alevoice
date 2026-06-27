@@ -26,6 +26,11 @@ public struct ContentView: View {
                         await viewModel.refreshPermissionStatus()
                     }
                 }
+                Button("Request Microphone") {
+                    Task {
+                        await viewModel.requestMicrophonePermission()
+                    }
+                }
             }
 
             HStack(spacing: 12) {
@@ -40,6 +45,11 @@ public struct ContentView: View {
                         await viewModel.requestAccessibilityPermission()
                     }
                 }
+                Button("Open Settings") {
+                    Task {
+                        await viewModel.openAccessibilitySettings()
+                    }
+                }
             }
 
             HStack(spacing: 12) {
@@ -52,6 +62,11 @@ public struct ContentView: View {
                 Button("Request / Re-check") {
                     Task {
                         await viewModel.requestInputMonitoringPermission()
+                    }
+                }
+                Button("Open Settings") {
+                    Task {
+                        await viewModel.openInputMonitoringSettings()
                     }
                 }
             }
@@ -105,6 +120,7 @@ public struct ContentView: View {
             if let errorText = viewModel.errorText {
                 Text(errorText)
                     .foregroundStyle(.red)
+                    .textSelection(.enabled)
             }
         }
         .padding(16)

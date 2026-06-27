@@ -32,6 +32,6 @@ struct AccessibilityPermission: @unchecked Sendable {
             return .authorized
         }
 
-        return checkIsTrusted() ? .authorized : .denied
+        return checkIsTrusted() ? .authorized : .unknown
     }
 }

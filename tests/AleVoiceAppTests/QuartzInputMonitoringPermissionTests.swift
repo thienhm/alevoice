@@ -17,4 +17,19 @@ final class QuartzInputMonitoringPermissionTests: XCTestCase {
 
         XCTAssertEqual(permission.status(), InputMonitoringPermissionStatus.unknown)
     }
+
+    func test_requestAccessReportsUnknownWhenQuartzDoesNotConfirmAuthorization() {
+        let userDefaults = UserDefaults(suiteName: "QuartzInputMonitoringPermissionTests.request")!
+        userDefaults.removePersistentDomain(forName: "QuartzInputMonitoringPermissionTests.request")
+
+        let permission = QuartzInputMonitoringPermission(
+            userDefaults: userDefaults,
+            requestAttemptKey: "requested",
+            preflightListenEventAccess: { false },
+            requestListenEventAccess: { false }
+        )
+
+        XCTAssertEqual(permission.requestAccess(), InputMonitoringPermissionStatus.unknown)
+        XCTAssertTrue(userDefaults.bool(forKey: "requested"))
+    }
 }

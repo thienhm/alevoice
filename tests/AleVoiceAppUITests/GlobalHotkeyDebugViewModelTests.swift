@@ -18,13 +18,13 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
     @MainActor
     func test_requestInputMonitoringPermissionUpdatesStatusText() async {
         let viewModel = TranscriptionDebugViewModel(
-            requestInputMonitoringPermission: { .denied },
+            requestInputMonitoringPermission: { .unknown },
             transcribe: { _, _, _ in fatalError() }
         )
 
         await viewModel.requestInputMonitoringPermission()
 
-        XCTAssertEqual(viewModel.inputMonitoringStatusText, "Input Monitoring: denied")
+        XCTAssertEqual(viewModel.inputMonitoringStatusText, "Input Monitoring: unknown")
     }
 
     @MainActor
@@ -42,13 +42,33 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
     @MainActor
     func test_requestAccessibilityPermissionUpdatesStatusText() async {
         let viewModel = TranscriptionDebugViewModel(
-            requestAccessibilityPermission: { .denied },
+            requestAccessibilityPermission: { .unknown },
             transcribe: { _, _, _ in fatalError() }
         )
 
         await viewModel.requestAccessibilityPermission()
 
-        XCTAssertEqual(viewModel.accessibilityStatusText, "Accessibility: denied")
+        XCTAssertEqual(viewModel.accessibilityStatusText, "Accessibility: unknown")
+    }
+
+    @MainActor
+    func test_openPermissionSettingsActionsInvokeConfiguredHandlers() async {
+        let probe = PermissionSettingsProbe()
+        let viewModel = TranscriptionDebugViewModel(
+            openAccessibilitySettings: {
+                await probe.record("accessibility")
+            },
+            openInputMonitoringSettings: {
+                await probe.record("inputMonitoring")
+            },
+            transcribe: { _, _, _ in fatalError() }
+        )
+
+        await viewModel.openAccessibilitySettings()
+        await viewModel.openInputMonitoringSettings()
+
+        let actions = await probe.actions()
+        XCTAssertEqual(actions, ["accessibility", "inputMonitoring"])
     }
 
     @MainActor
@@ -312,6 +332,18 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
 
         await gate.release()
         await captureTask.value
+    }
+}
+
+private actor PermissionSettingsProbe {
+    private var recordedActions: [String] = []
+
+    func record(_ action: String) {
+        recordedActions.append(action)
+    }
+
+    func actions() -> [String] {
+        recordedActions
     }
 }
 

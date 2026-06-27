@@ -12,7 +12,6 @@ struct AleVoiceApp: App {
     private let assetLocator: DebugAssetLocator
     private let hotkeyMonitor: QuartzHotkeyMonitor
     private let menuBarController: MenuBarController
-    private let overlayController: OverlayWindowController
     private let sessionStateObserver: AnyCancellable
 
     init() {
@@ -28,11 +27,11 @@ struct AleVoiceApp: App {
         let shellModel = MenuBarShellModel()
         let menuBarController = MenuBarController(
             statusItem: nil,
-            setTitle: { title in
-                shellModel.title = title
+            updateShell: { presentation in
+                shellModel.title = presentation.title
+                shellModel.isRecordingIndicatorVisible = presentation.isRecordingIndicatorVisible
             }
         )
-        let overlayController = OverlayWindowController()
         let pasteOutput = ClipboardPasteTranscriptOutput(
             accessibilityStatus: { accessibilityPermission.status() }
         )
@@ -44,6 +43,9 @@ struct AleVoiceApp: App {
         let viewModel = TranscriptionDebugViewModel(
             microphonePermissionStatus: {
                 await audioRecorder.microphonePermissionStatus()
+            },
+            requestMicrophonePermission: {
+                await audioRecorder.requestMicrophonePermission()
             },
             accessibilityPermissionStatus: {
                 accessibilityPermission.status()
@@ -72,6 +74,12 @@ struct AleVoiceApp: App {
                     }
                 }
                 return status
+            },
+            openAccessibilitySettings: {
+                PermissionSettingsOpener.openAccessibility()
+            },
+            openInputMonitoringSettings: {
+                PermissionSettingsOpener.openInputMonitoring()
             },
             loadShortcut: {
                 shortcutStore.load()
@@ -129,7 +137,6 @@ struct AleVoiceApp: App {
                 inputMonitoringText: viewModel.inputMonitoringStatusText,
                 shortcutText: viewModel.shortcutDisplayText
             )
-            overlayController.render(state: state)
         }
         menuBarController.render(
             state: viewModel.sessionState,
@@ -144,13 +151,20 @@ struct AleVoiceApp: App {
         self.assetLocator = assetLocator
         self.hotkeyMonitor = hotkeyMonitor
         self.menuBarController = menuBarController
-        self.overlayController = overlayController
         self.sessionStateObserver = sessionStateObserver
     }
 
     var body: some Scene {
-        MenuBarExtra(shellModel.title, systemImage: "waveform") {
+        MenuBarExtra {
             MenuBarMenuView(viewModel: viewModel)
+        } label: {
+            Label {
+                Text(shellModel.title)
+            } icon: {
+                Image(systemName: "waveform")
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(shellModel.isRecordingIndicatorVisible ? Color.red : Color.primary)
+            }
         }
 
         Window("AleVoice Settings", id: "settings") {
@@ -160,5 +174,18 @@ struct AleVoiceApp: App {
                 }
         }
         .defaultSize(width: 560, height: 320)
+    }
+}
+
+private enum PermissionSettingsOpener {
+    private static let accessibilityURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+    private static let inputMonitoringURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!
+
+    static func openAccessibility(workspace: NSWorkspace = .shared) {
+        workspace.open(accessibilityURL)
+    }
+
+    static func openInputMonitoring(workspace: NSWorkspace = .shared) {
+        workspace.open(inputMonitoringURL)
     }
 }

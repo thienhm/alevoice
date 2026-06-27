@@ -17,14 +17,8 @@ final class OverlayWindowController {
     }
 
     func render(state: DictationSessionState) {
-        switch state {
-        case .idle:
-            hideWindowAction()
-            panel?.orderOut(nil)
-        case .recording, .processing, .success, .error:
-            showWindowAction()
-            showPanel(for: state)
-        }
+        hideWindowAction()
+        panel?.orderOut(nil)
     }
 
     private func showPanel(for state: DictationSessionState) {

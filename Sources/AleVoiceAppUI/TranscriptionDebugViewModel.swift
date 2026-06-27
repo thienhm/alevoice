@@ -20,10 +20,13 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     @Published public private(set) var isCapturingShortcut: Bool = false
 
     private let microphonePermissionStatusClosure: @Sendable () async -> MicrophonePermissionStatus
+    private let requestMicrophonePermissionClosure: @Sendable () async -> MicrophonePermissionStatus
     private let accessibilityPermissionStatusClosure: @Sendable () async -> AccessibilityPermissionStatus
     private let requestAccessibilityPermissionClosure: @Sendable () async -> AccessibilityPermissionStatus
     private let inputMonitoringPermissionStatusClosure: @Sendable () async -> InputMonitoringPermissionStatus
     private let requestInputMonitoringPermissionClosure: @Sendable () async -> InputMonitoringPermissionStatus
+    private let openAccessibilitySettingsClosure: @Sendable () async -> Void
+    private let openInputMonitoringSettingsClosure: @Sendable () async -> Void
     private let loadShortcutClosure: @Sendable () -> DictationShortcut?
     private let saveShortcutClosure: @Sendable (DictationShortcut) throws -> Void
     private let beginShortcutCaptureClosure: @Sendable () async -> Result<DictationShortcut, DictationShortcutError>
@@ -39,10 +42,13 @@ public final class TranscriptionDebugViewModel: ObservableObject {
 
     public init(
         microphonePermissionStatus: @escaping @Sendable () async -> MicrophonePermissionStatus = { .unknown },
+        requestMicrophonePermission: @escaping @Sendable () async -> MicrophonePermissionStatus = { .unknown },
         accessibilityPermissionStatus: @escaping @Sendable () async -> AccessibilityPermissionStatus = { .unknown },
         requestAccessibilityPermission: @escaping @Sendable () async -> AccessibilityPermissionStatus = { .unknown },
         inputMonitoringPermissionStatus: @escaping @Sendable () async -> InputMonitoringPermissionStatus = { .unknown },
         requestInputMonitoringPermission: @escaping @Sendable () async -> InputMonitoringPermissionStatus = { .unknown },
+        openAccessibilitySettings: @escaping @Sendable () async -> Void = {},
+        openInputMonitoringSettings: @escaping @Sendable () async -> Void = {},
         loadShortcut: @escaping @Sendable () -> DictationShortcut? = { nil },
         beginShortcutCapture: @escaping @Sendable () async -> Result<DictationShortcut, DictationShortcutError> = {
             .failure(.missingModifier)
@@ -60,10 +66,13 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         deliverTranscript: @escaping @Sendable (String) async throws -> Void = { _ in }
     ) {
         self.microphonePermissionStatusClosure = microphonePermissionStatus
+        self.requestMicrophonePermissionClosure = requestMicrophonePermission
         self.accessibilityPermissionStatusClosure = accessibilityPermissionStatus
         self.requestAccessibilityPermissionClosure = requestAccessibilityPermission
         self.inputMonitoringPermissionStatusClosure = inputMonitoringPermissionStatus
         self.requestInputMonitoringPermissionClosure = requestInputMonitoringPermission
+        self.openAccessibilitySettingsClosure = openAccessibilitySettings
+        self.openInputMonitoringSettingsClosure = openInputMonitoringSettings
         self.loadShortcutClosure = loadShortcut
         self.saveShortcutClosure = saveShortcut
         self.beginShortcutCaptureClosure = beginShortcutCapture
@@ -80,6 +89,11 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         permissionStatusText = "Microphone permission: \(Self.displayText(for: status))"
     }
 
+    public func requestMicrophonePermission() async {
+        let status = await requestMicrophonePermissionClosure()
+        permissionStatusText = "Microphone permission: \(Self.displayText(for: status))"
+    }
+
     public func refreshAccessibilityStatus() async {
         let status = await accessibilityPermissionStatusClosure()
         accessibilityStatusText = "Accessibility: \(Self.displayText(for: status))"
@@ -90,6 +104,10 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         accessibilityStatusText = "Accessibility: \(Self.displayText(for: status))"
     }
 
+    public func openAccessibilitySettings() async {
+        await openAccessibilitySettingsClosure()
+    }
+
     public func refreshInputMonitoringStatus() async {
         let status = await inputMonitoringPermissionStatusClosure()
         inputMonitoringStatusText = "Input Monitoring: \(Self.displayText(for: status))"
@@ -98,6 +116,10 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     public func requestInputMonitoringPermission() async {
         let status = await requestInputMonitoringPermissionClosure()
         inputMonitoringStatusText = "Input Monitoring: \(Self.displayText(for: status))"
+    }
+
+    public func openInputMonitoringSettings() async {
+        await openInputMonitoringSettingsClosure()
     }
 
     public func loadShortcut() {

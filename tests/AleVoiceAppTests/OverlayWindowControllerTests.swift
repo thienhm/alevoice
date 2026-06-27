@@ -4,28 +4,26 @@ import AleVoiceCore
 
 final class OverlayWindowControllerTests: XCTestCase {
     @MainActor
-    func test_renderShowsRecordingOverlay() {
-        var didShow = false
+    func test_renderNeverShowsOverlayForAnyState() {
+        let states: [DictationSessionState] = [
+            .idle,
+            .recording,
+            .processing,
+            .success("done"),
+            .error("failed")
+        ]
+        var showCount = 0
+        var hideCount = 0
         let controller = OverlayWindowController(
-            showWindow: { didShow = true },
-            hideWindow: { XCTFail("hide should not be called") }
+            showWindow: { showCount += 1 },
+            hideWindow: { hideCount += 1 }
         )
 
-        controller.render(state: .recording)
+        for state in states {
+            controller.render(state: state)
+        }
 
-        XCTAssertTrue(didShow)
-    }
-
-    @MainActor
-    func test_renderHidesOverlayWhenIdle() {
-        var didHide = false
-        let controller = OverlayWindowController(
-            showWindow: { XCTFail("show should not be called") },
-            hideWindow: { didHide = true }
-        )
-
-        controller.render(state: .idle)
-
-        XCTAssertTrue(didHide)
+        XCTAssertEqual(showCount, 0)
+        XCTAssertEqual(hideCount, states.count)
     }
 }
