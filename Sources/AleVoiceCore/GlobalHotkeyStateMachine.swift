@@ -25,7 +25,7 @@ public enum GlobalHotkeyTransition: Equatable, Sendable {
 
 public struct GlobalHotkeyStateMachine: Sendable {
     private let shortcut: DictationShortcut
-    private var pressedPrimaryKeyCode: UInt16?
+    private var pressedKeyCodes: Set<UInt16> = []
     private var wasActive = false
 
     public init(shortcut: DictationShortcut) {
@@ -35,17 +35,19 @@ public struct GlobalHotkeyStateMachine: Sendable {
     public mutating func handle(_ event: GlobalKeyEvent) -> [GlobalHotkeyTransition] {
         switch event.kind {
         case .keyDown:
-            pressedPrimaryKeyCode = event.keyCode
+            if let keyCode = event.keyCode {
+                pressedKeyCodes.insert(keyCode)
+            }
         case .keyUp:
-            if pressedPrimaryKeyCode == event.keyCode {
-                pressedPrimaryKeyCode = nil
+            if let keyCode = event.keyCode {
+                pressedKeyCodes.remove(keyCode)
             }
         case .flagsChanged:
             break
         }
 
         let modifiersMatch = event.modifiers.isSuperset(of: shortcut.modifiers)
-        let primaryMatches = shortcut.primaryKey.map { $0.keyCode == pressedPrimaryKeyCode } ?? true
+        let primaryMatches = shortcut.primaryKey.map { pressedKeyCodes.contains($0.keyCode) } ?? true
         let isActive = modifiersMatch && primaryMatches
 
         defer { wasActive = isActive }
