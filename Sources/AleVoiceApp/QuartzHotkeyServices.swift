@@ -13,12 +13,6 @@ final class QuartzHotkeyMonitor {
     private var runLoopSource: CFRunLoopSource?
     private var retainedUserInfo: UnsafeMutableRawPointer?
 
-    deinit {
-        MainActor.assumeIsolated {
-            stop()
-        }
-    }
-
     func updateShortcut(_ shortcut: DictationShortcut?) {
         self.shortcut = shortcut
         stateMachine = shortcut.map(GlobalHotkeyStateMachine.init)

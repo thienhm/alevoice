@@ -101,6 +101,9 @@ struct AleVoiceApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(viewModel: viewModel, assetLocator: assetLocator)
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
+                    hotkeyMonitor.stop()
+                }
         }
     }
 }
