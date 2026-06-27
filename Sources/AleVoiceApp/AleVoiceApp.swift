@@ -5,35 +5,90 @@ import SwiftUI
 
 @main
 struct AleVoiceApp: App {
-    private let audioRecorder = AudioRecorder()
+    @StateObject private var viewModel: TranscriptionDebugViewModel
+    private let assetLocator: DebugAssetLocator
+    private let hotkeyMonitor: QuartzHotkeyMonitor
 
     init() {
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
+
+        let audioRecorder = AudioRecorder()
+        let shortcutStore = UserDefaultsDictationShortcutStore()
+        let inputMonitoringPermission = QuartzInputMonitoringPermission()
+        let shortcutCaptureController = QuartzShortcutCaptureController()
+        let assetLocator = DebugAssetLocator()
+        let hotkeyMonitor = QuartzHotkeyMonitor()
+        let configURL = assetLocator.speechEngineConfigURL()
+
+        let viewModel = TranscriptionDebugViewModel(
+            microphonePermissionStatus: {
+                await audioRecorder.microphonePermissionStatus()
+            },
+            inputMonitoringPermissionStatus: {
+                inputMonitoringPermission.status()
+            },
+            requestInputMonitoringPermission: {
+                let status = inputMonitoringPermission.requestAccess()
+                if status == .authorized {
+                    Task { @MainActor in
+                        hotkeyMonitor.start()
+                    }
+                }
+                return status
+            },
+            loadShortcut: {
+                shortcutStore.load()
+            },
+            beginShortcutCapture: {
+                await shortcutCaptureController.captureShortcut()
+            },
+            saveShortcut: {
+                try shortcutStore.save($0)
+            },
+            onShortcutChange: {
+                let shortcut = $0
+                Task { @MainActor in
+                    hotkeyMonitor.updateShortcut(shortcut)
+                }
+            },
+            startRecording: {
+                try await audioRecorder.start()
+            },
+            stopRecording: {
+                try await audioRecorder.stop()
+            },
+            transcribe: { configURL, audioURL, mode in
+                try await Task.detached {
+                    let settings = try SpeechEngineSettings.load(from: configURL)
+                    let coordinator = TranscriptionCoordinator(settings: settings)
+                    return try coordinator.transcribe(audioURL: audioURL, overrideMode: mode)
+                }.value
+            }
+        )
+
+        hotkeyMonitor.onTransition = { transition in
+            Task { @MainActor in
+                switch transition {
+                case .activated:
+                    await viewModel.handleGlobalShortcutActivation()
+                case .released:
+                    await viewModel.handleGlobalShortcutRelease(configURL: configURL)
+                }
+            }
+        }
+
+        hotkeyMonitor.updateShortcut(shortcutStore.load())
+        hotkeyMonitor.start()
+
+        _viewModel = StateObject(wrappedValue: viewModel)
+        self.assetLocator = assetLocator
+        self.hotkeyMonitor = hotkeyMonitor
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView(
-                viewModel: TranscriptionDebugViewModel(
-                    microphonePermissionStatus: {
-                        await audioRecorder.microphonePermissionStatus()
-                    },
-                    startRecording: {
-                        try await audioRecorder.start()
-                    },
-                    stopRecording: {
-                        try await audioRecorder.stop()
-                    },
-                    transcribe: { configURL, audioURL, mode in
-                        try await Task.detached {
-                            let settings = try SpeechEngineSettings.load(from: configURL)
-                            let coordinator = TranscriptionCoordinator(settings: settings)
-                            return try coordinator.transcribe(audioURL: audioURL, overrideMode: mode)
-                        }.value
-                    }
-                )
-            )
+            ContentView(viewModel: viewModel, assetLocator: assetLocator)
         }
     }
 }
