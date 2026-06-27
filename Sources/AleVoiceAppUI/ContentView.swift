@@ -3,7 +3,6 @@ import SwiftUI
 
 public struct ContentView: View {
     @StateObject private var viewModel: TranscriptionDebugViewModel
-    @State private var selectedMode: SpeechLanguageMode = .auto
     private let configURL: URL
     private let sampleAudioURL: URL
 
@@ -27,7 +26,30 @@ public struct ContentView: View {
                 }
             }
 
-            Picker("Language mode", selection: $selectedMode) {
+            HStack(spacing: 12) {
+                Text(viewModel.inputMonitoringStatusText)
+                Button("Refresh Input Monitoring") {
+                    Task {
+                        await viewModel.refreshInputMonitoringStatus()
+                    }
+                }
+            }
+
+            HStack(spacing: 12) {
+                Text(viewModel.shortcutDisplayText)
+                Button("Record shortcut") {
+                    Task {
+                        await viewModel.captureShortcut()
+                    }
+                }
+                .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || viewModel.isRecording)
+            }
+
+            if !viewModel.shortcutCaptureText.isEmpty {
+                Text(viewModel.shortcutCaptureText)
+            }
+
+            Picker("Language mode", selection: $viewModel.selectedMode) {
                 Text("Auto").tag(SpeechLanguageMode.auto)
                 Text("English").tag(SpeechLanguageMode.en)
                 Text("Vietnamese").tag(SpeechLanguageMode.vi)
@@ -46,7 +68,7 @@ public struct ContentView: View {
                     Task {
                         await viewModel.stopRecordingAndTranscribe(
                             configURL: configURL,
-                            mode: selectedMode
+                            mode: viewModel.selectedMode
                         )
                     }
                 }
@@ -77,7 +99,9 @@ public struct ContentView: View {
         .padding(16)
         .frame(minWidth: 560, minHeight: 260)
         .task {
+            viewModel.loadShortcut()
             await viewModel.refreshPermissionStatus()
+            await viewModel.refreshInputMonitoringStatus()
         }
     }
 }

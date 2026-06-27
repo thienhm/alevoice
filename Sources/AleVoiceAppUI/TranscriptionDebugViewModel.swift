@@ -11,8 +11,19 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     @Published public private(set) var isRecording: Bool = false
     @Published public private(set) var recordingStatusText: String = "Recorder idle"
     @Published public private(set) var permissionStatusText: String = "Microphone permission: unknown"
+    @Published public var selectedMode: SpeechLanguageMode = .auto
+    @Published public private(set) var inputMonitoringStatusText: String = "Input Monitoring: unknown"
+    @Published public private(set) var shortcutDisplayText: String = "Dictation shortcut: not set"
+    @Published public private(set) var shortcutCaptureText: String = ""
+    @Published public private(set) var isCapturingShortcut: Bool = false
 
     private let microphonePermissionStatusClosure: @Sendable () async -> MicrophonePermissionStatus
+    private let inputMonitoringPermissionStatusClosure: @Sendable () async -> InputMonitoringPermissionStatus
+    private let requestInputMonitoringPermissionClosure: @Sendable () async -> InputMonitoringPermissionStatus
+    private let loadShortcutClosure: @Sendable () -> DictationShortcut?
+    private let saveShortcutClosure: @Sendable (DictationShortcut) throws -> Void
+    private let beginShortcutCaptureClosure: @Sendable () async -> Result<DictationShortcut, DictationShortcutError>
+    private let onShortcutChangeClosure: @Sendable (DictationShortcut?) -> Void
     private let startRecordingClosure: @Sendable () async throws -> Void
     private let stopRecordingClosure: @Sendable () async throws -> AudioRecordingResult
     private let transcribeClosure: @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult
@@ -20,6 +31,14 @@ public final class TranscriptionDebugViewModel: ObservableObject {
 
     public init(
         microphonePermissionStatus: @escaping @Sendable () async -> MicrophonePermissionStatus = { .unknown },
+        inputMonitoringPermissionStatus: @escaping @Sendable () async -> InputMonitoringPermissionStatus = { .unknown },
+        requestInputMonitoringPermission: @escaping @Sendable () async -> InputMonitoringPermissionStatus = { .unknown },
+        loadShortcut: @escaping @Sendable () -> DictationShortcut? = { nil },
+        beginShortcutCapture: @escaping @Sendable () async -> Result<DictationShortcut, DictationShortcutError> = {
+            .failure(.missingModifier)
+        },
+        saveShortcut: @escaping @Sendable (DictationShortcut) throws -> Void = { _ in },
+        onShortcutChange: @escaping @Sendable (DictationShortcut?) -> Void = { _ in },
         startRecording: @escaping @Sendable () async throws -> Void = {
             throw AudioRecorderError.captureFailed("recorder not configured")
         },
@@ -29,6 +48,12 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         transcribe: @escaping @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult
     ) {
         self.microphonePermissionStatusClosure = microphonePermissionStatus
+        self.inputMonitoringPermissionStatusClosure = inputMonitoringPermissionStatus
+        self.requestInputMonitoringPermissionClosure = requestInputMonitoringPermission
+        self.loadShortcutClosure = loadShortcut
+        self.saveShortcutClosure = saveShortcut
+        self.beginShortcutCaptureClosure = beginShortcutCapture
+        self.onShortcutChangeClosure = onShortcutChange
         self.startRecordingClosure = startRecording
         self.stopRecordingClosure = stopRecording
         self.transcribeClosure = transcribe
@@ -37,6 +62,61 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     public func refreshPermissionStatus() async {
         let status = await microphonePermissionStatusClosure()
         permissionStatusText = "Microphone permission: \(Self.displayText(for: status))"
+    }
+
+    public func refreshInputMonitoringStatus() async {
+        let status = await inputMonitoringPermissionStatusClosure()
+        inputMonitoringStatusText = "Input Monitoring: \(Self.displayText(for: status))"
+    }
+
+    public func requestInputMonitoringPermission() async {
+        let status = await requestInputMonitoringPermissionClosure()
+        inputMonitoringStatusText = "Input Monitoring: \(Self.displayText(for: status))"
+    }
+
+    public func loadShortcut() {
+        let shortcut = loadShortcutClosure()
+        applyShortcut(shortcut)
+        onShortcutChangeClosure(shortcut)
+    }
+
+    public func captureShortcut() async {
+        isCapturingShortcut = true
+        shortcutCaptureText = "Press shortcut keys"
+
+        let result = await beginShortcutCaptureClosure()
+        switch result {
+        case .success(let shortcut):
+            do {
+                try saveShortcutClosure(shortcut)
+                applyShortcut(shortcut)
+                onShortcutChangeClosure(shortcut)
+                errorText = nil
+            } catch {
+                applyError(error)
+            }
+        case .failure(let error):
+            applyError(error)
+        }
+
+        isCapturingShortcut = false
+        shortcutCaptureText = ""
+    }
+
+    public func handleGlobalShortcutActivation() async {
+        guard !isCapturingShortcut, !isRecording, !isRunning else {
+            return
+        }
+
+        await startRecording()
+    }
+
+    public func handleGlobalShortcutRelease(configURL: URL) async {
+        guard !isCapturingShortcut else {
+            return
+        }
+
+        await stopRecordingAndTranscribe(configURL: configURL, mode: selectedMode)
     }
 
     public func startRecording() async {
@@ -138,6 +218,14 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         errorText = String(describing: error)
     }
 
+    private func applyShortcut(_ shortcut: DictationShortcut?) {
+        if let shortcut {
+            shortcutDisplayText = "Dictation shortcut: \(shortcut.displayText)"
+        } else {
+            shortcutDisplayText = "Dictation shortcut: not set"
+        }
+    }
+
     private static func displayText(for status: MicrophonePermissionStatus) -> String {
         switch status {
         case .authorized:
@@ -148,6 +236,19 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             return "denied"
         case .restricted:
             return "restricted"
+        case .unknown:
+            return "unknown"
+        }
+    }
+
+    private static func displayText(for status: InputMonitoringPermissionStatus) -> String {
+        switch status {
+        case .authorized:
+            return "authorized"
+        case .notDetermined:
+            return "not determined"
+        case .denied:
+            return "denied"
         case .unknown:
             return "unknown"
         }
