@@ -28,6 +28,30 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_refreshAccessibilityStatusShowsAuthorizedState() async {
+        let viewModel = TranscriptionDebugViewModel(
+            accessibilityPermissionStatus: { .authorized },
+            transcribe: { _, _, _ in fatalError() }
+        )
+
+        await viewModel.refreshAccessibilityStatus()
+
+        XCTAssertEqual(viewModel.accessibilityStatusText, "Accessibility: authorized")
+    }
+
+    @MainActor
+    func test_requestAccessibilityPermissionUpdatesStatusText() async {
+        let viewModel = TranscriptionDebugViewModel(
+            requestAccessibilityPermission: { .denied },
+            transcribe: { _, _, _ in fatalError() }
+        )
+
+        await viewModel.requestAccessibilityPermission()
+
+        XCTAssertEqual(viewModel.accessibilityStatusText, "Accessibility: denied")
+    }
+
+    @MainActor
     func test_captureShortcutSavesDisplayTextAndClearsError() async {
         let shortcut = try! DictationShortcut(modifiers: [.control], primaryKey: .space)
         let viewModel = TranscriptionDebugViewModel(
@@ -91,6 +115,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         let gate = AsyncGate()
         let recordingProbe = RecordingProbe()
         let transcriptionProbe = TranscriptionProbe()
+        let outputProbe = TranscriptOutputProbe()
         let viewModel = TranscriptionDebugViewModel(
             startRecording: {
                 await gate.wait()
@@ -108,6 +133,9 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
                     transcript: "hello",
                     latencyMs: 99
                 )
+            },
+            deliverTranscript: { transcript in
+                await outputProbe.record(transcript)
             }
         )
         viewModel.selectedMode = .vi
@@ -136,6 +164,8 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         XCTAssertTrue(didStop)
         XCTAssertFalse(viewModel.isRecording)
         XCTAssertEqual(viewModel.transcript, "hello")
+        let delivered = await outputProbe.transcripts()
+        XCTAssertEqual(delivered, ["hello"])
     }
 
     @MainActor
@@ -328,6 +358,18 @@ private actor RecordingProbe {
 
     func didStop() -> Bool {
         stopped
+    }
+}
+
+private actor TranscriptOutputProbe {
+    private var storedTranscripts: [String] = []
+
+    func record(_ transcript: String) {
+        storedTranscripts.append(transcript)
+    }
+
+    func transcripts() -> [String] {
+        storedTranscripts
     }
 }
 

@@ -14,10 +14,12 @@ Define current native macOS dictation workflow after benchmark phase.
 - Holding configured shortcut starts microphone capture.
 - Releasing configured shortcut stops capture and transcribes through current
   FunASR-first path.
+- Successful recording transcription is pasted into the currently focused app
+  through clipboard-backed paste automation.
+- User can inspect Accessibility status in app UI.
 
 ## Out Of Scope
 
-- Paste transcript into focused app
 - Overlay UI
 - Formatting-command normalization
 - Conflict resolution beyond rejecting unsupported or modifier-free shortcuts

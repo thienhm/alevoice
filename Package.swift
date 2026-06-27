@@ -36,5 +36,10 @@ let package = Package(
             dependencies: ["AleVoiceAppUI", "AleVoiceCore"],
             path: "tests/AleVoiceAppUITests"
         ),
+        .testTarget(
+            name: "AleVoiceAppTests",
+            dependencies: ["AleVoiceApp", "AleVoiceCore"],
+            path: "tests/AleVoiceAppTests"
+        ),
     ]
 )

@@ -27,6 +27,20 @@ public struct ContentView: View {
             }
 
             HStack(spacing: 12) {
+                Text(viewModel.accessibilityStatusText)
+                Button("Refresh Accessibility") {
+                    Task {
+                        await viewModel.refreshAccessibilityStatus()
+                    }
+                }
+                Button("Request Accessibility") {
+                    Task {
+                        await viewModel.requestAccessibilityPermission()
+                    }
+                }
+            }
+
+            HStack(spacing: 12) {
                 Text(viewModel.inputMonitoringStatusText)
                 Button("Refresh Input Monitoring") {
                     Task {
@@ -106,6 +120,7 @@ public struct ContentView: View {
         .task {
             viewModel.loadShortcut()
             await viewModel.refreshPermissionStatus()
+            await viewModel.refreshAccessibilityStatus()
             await viewModel.refreshInputMonitoringStatus()
         }
     }

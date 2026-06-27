@@ -16,15 +16,28 @@ struct AleVoiceApp: App {
 
         let audioRecorder = AudioRecorder()
         let shortcutStore = UserDefaultsDictationShortcutStore()
+        let accessibilityPermission = AccessibilityPermission()
         let inputMonitoringPermission = QuartzInputMonitoringPermission()
         let shortcutCaptureController = QuartzShortcutCaptureController()
         let assetLocator = DebugAssetLocator()
         let hotkeyMonitor = QuartzHotkeyMonitor()
+        let pasteOutput = ClipboardPasteTranscriptOutput(
+            accessibilityStatus: { accessibilityPermission.status() }
+        )
         let configURL = assetLocator.speechEngineConfigURL()
+        let transcriptOutputService = TranscriptOutputService { transcript in
+            try await pasteOutput.deliver(transcript)
+        }
 
         let viewModel = TranscriptionDebugViewModel(
             microphonePermissionStatus: {
                 await audioRecorder.microphonePermissionStatus()
+            },
+            accessibilityPermissionStatus: {
+                accessibilityPermission.status()
+            },
+            requestAccessibilityPermission: {
+                accessibilityPermission.requestAccess()
             },
             inputMonitoringPermissionStatus: {
                 let status = inputMonitoringPermission.status()
@@ -74,6 +87,9 @@ struct AleVoiceApp: App {
                     let coordinator = TranscriptionCoordinator(settings: settings)
                     return try coordinator.transcribe(audioURL: audioURL, overrideMode: mode)
                 }.value
+            },
+            deliverTranscript: { transcript in
+                try await transcriptOutputService.deliver(transcript)
             }
         )
 

@@ -145,6 +145,77 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_stopRecordingDeliversSuccessfulTranscript() async throws {
+        let outputProbe = TranscriptOutputProbe()
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {},
+            stopRecording: {
+                AudioRecordingResult(audioURL: URL(fileURLWithPath: "/tmp/captured.wav"), byteCount: 4_096)
+            },
+            transcribe: { _, _, _ async throws in
+                SpeechTranscriptionResult(
+                    engine: .funasr,
+                    modelIdentifier: "sensevoice-small",
+                    transcript: "paste me",
+                    latencyMs: 456
+                )
+            },
+            deliverTranscript: { transcript in
+                await outputProbe.record(transcript)
+            }
+        )
+
+        await viewModel.startRecording()
+        await viewModel.stopRecordingAndTranscribe(
+            configURL: URL(fileURLWithPath: "/tmp/config.json"),
+            mode: .auto
+        )
+
+        let delivered = await outputProbe.transcripts()
+        XCTAssertEqual(delivered, ["paste me"])
+        XCTAssertEqual(viewModel.transcript, "paste me")
+        XCTAssertNil(viewModel.errorText)
+    }
+
+    @MainActor
+    func test_stopRecordingKeepsTranscriptWhenDeliveryFails() async throws {
+        enum StubError: Error {
+            case pasteFailed
+        }
+
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {},
+            stopRecording: {
+                AudioRecordingResult(audioURL: URL(fileURLWithPath: "/tmp/captured.wav"), byteCount: 4_096)
+            },
+            transcribe: { _, _, _ async throws in
+                SpeechTranscriptionResult(
+                    engine: .funasr,
+                    modelIdentifier: "sensevoice-small",
+                    transcript: "still visible",
+                    latencyMs: 456
+                )
+            },
+            deliverTranscript: { _ in
+                throw StubError.pasteFailed
+            }
+        )
+
+        await viewModel.startRecording()
+        await viewModel.stopRecordingAndTranscribe(
+            configURL: URL(fileURLWithPath: "/tmp/config.json"),
+            mode: .auto
+        )
+
+        XCTAssertFalse(viewModel.isRecording)
+        XCTAssertFalse(viewModel.isRunning)
+        XCTAssertEqual(viewModel.recordingStatusText, "Last recording ready")
+        XCTAssertEqual(viewModel.transcript, "still visible")
+        XCTAssertEqual(viewModel.latencyText, "456 ms")
+        XCTAssertEqual(viewModel.errorText, "pasteFailed")
+    }
+
+    @MainActor
     func test_startRecordingSurfacesPermissionDeniedError() async throws {
         let viewModel = TranscriptionDebugViewModel(
             startRecording: {
@@ -238,8 +309,12 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
             transcript: "hello world",
             latencyMs: 210
         )
+        let outputProbe = TranscriptOutputProbe()
         let viewModel = TranscriptionDebugViewModel(
-            transcribe: { _, _, _ async throws in result }
+            transcribe: { _, _, _ async throws in result },
+            deliverTranscript: { transcript in
+                await outputProbe.record(transcript)
+            }
         )
 
         await viewModel.runSample(
@@ -251,6 +326,8 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.transcript, "hello world")
         XCTAssertEqual(viewModel.latencyText, "210 ms")
         XCTAssertNil(viewModel.errorText)
+        let delivered = await outputProbe.transcripts()
+        XCTAssertTrue(delivered.isEmpty)
     }
 
     @MainActor
@@ -391,6 +468,18 @@ private actor TranscriptionProbe {
 
     func invocation() -> Invocation? {
         storedInvocation
+    }
+}
+
+private actor TranscriptOutputProbe {
+    private var storedTranscripts: [String] = []
+
+    func record(_ transcript: String) {
+        storedTranscripts.append(transcript)
+    }
+
+    func transcripts() -> [String] {
+        storedTranscripts
     }
 }
 
