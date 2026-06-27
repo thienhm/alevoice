@@ -69,7 +69,7 @@ When updating durable proof status, use numeric booleans:
 
 ## Evidence
 
-2026-06-27: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` passed with 66 tests and 0 failures. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app --print-bundle-path` built, signed, and reported `.build/debug/AleVoiceApp.app`; `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app` built, signed, and opened the app bundle successfully.
+2026-06-27: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` passed with 67 tests and 0 failures. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app --print-bundle-path` built, signed, and reported `.build/debug/AleVoiceApp.app`; `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app` built, signed, and opened the app bundle successfully.
 
 Direct app inspection showed microphone permission and Input Monitoring status rows, `Dictation shortcut: not set`, `Record shortcut`, and `Request / Re-check`. Clicking `Record shortcut` showed `Press shortcut keys` and disabled manual controls. Pressing `Control+Space` while capture mode was active updated the UI to `Dictation shortcut: Control+Space`, and persisted shortcut data exists in app defaults after capture. Clicking `Transcribe en-001 sample` rendered `404 ms` and `open terminal and show get status`.
 

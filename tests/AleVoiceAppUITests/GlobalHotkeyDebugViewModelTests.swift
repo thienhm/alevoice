@@ -139,6 +139,67 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_hotkeyReleaseDuringSampleRunDoesNotStopNextManualRecording() async {
+        let gate = AsyncGate()
+        let recordingProbe = RecordingProbe()
+        let transcriptionProbe = TranscriptionProbe()
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {
+                await recordingProbe.markStart()
+            },
+            stopRecording: {
+                await recordingProbe.markStop()
+                return AudioRecordingResult(audioURL: URL(fileURLWithPath: "/tmp/captured.wav"), byteCount: 123)
+            },
+            transcribe: { configURL, audioURL, mode in
+                await transcriptionProbe.record(configURL: configURL, audioURL: audioURL, mode: mode)
+                if audioURL.lastPathComponent == "sample.wav" {
+                    await gate.wait()
+                    return SpeechTranscriptionResult(
+                        engine: .funasr,
+                        modelIdentifier: "sensevoice-small",
+                        transcript: "sample",
+                        latencyMs: 10
+                    )
+                }
+
+                return SpeechTranscriptionResult(
+                    engine: .funasr,
+                    modelIdentifier: "sensevoice-small",
+                    transcript: "captured",
+                    latencyMs: 99
+                )
+            }
+        )
+
+        let sampleTask = Task {
+            await viewModel.runSample(
+                configURL: URL(fileURLWithPath: "/tmp/sample-config.json"),
+                audioURL: URL(fileURLWithPath: "/tmp/sample.wav"),
+                mode: .auto
+            )
+        }
+
+        await Task.yield()
+        XCTAssertTrue(viewModel.isRunning)
+        XCTAssertFalse(viewModel.isRecording)
+
+        await viewModel.handleGlobalShortcutRelease(configURL: URL(fileURLWithPath: "/tmp/stale-config.json"))
+
+        await gate.release()
+        await sampleTask.value
+
+        await viewModel.startRecording()
+
+        let didStop = await recordingProbe.didStop()
+        let invocations = await transcriptionProbe.invocations()
+        XCTAssertFalse(didStop)
+        XCTAssertTrue(viewModel.isRecording)
+        XCTAssertEqual(invocations.map(\.audioURL), [URL(fileURLWithPath: "/tmp/sample.wav")])
+        XCTAssertEqual(viewModel.transcript, "sample")
+    }
+
+    @MainActor
     func test_hotkeyReleaseAfterFailedActivationPreservesStartErrorAndSkipsTranscription() async {
         let probe = TranscriptionProbe()
         let viewModel = TranscriptionDebugViewModel(
@@ -232,13 +293,20 @@ private actor TranscriptionProbe {
     }
 
     private var storedInvocation: Invocation?
+    private var storedInvocations: [Invocation] = []
 
     func record(configURL: URL, audioURL: URL, mode: SpeechLanguageMode) {
-        storedInvocation = Invocation(configURL: configURL, audioURL: audioURL, mode: mode)
+        let invocation = Invocation(configURL: configURL, audioURL: audioURL, mode: mode)
+        storedInvocation = invocation
+        storedInvocations.append(invocation)
     }
 
     func invocation() -> Invocation? {
         storedInvocation
+    }
+
+    func invocations() -> [Invocation] {
+        storedInvocations
     }
 }
 
@@ -265,15 +333,25 @@ private actor RecordingProbe {
 
 private actor AsyncGate {
     private var continuation: CheckedContinuation<Void, Never>?
+    private var isReleased = false
 
     func wait() async {
+        if isReleased {
+            isReleased = false
+            return
+        }
+
         await withCheckedContinuation { continuation in
             self.continuation = continuation
         }
     }
 
     func release() {
-        continuation?.resume()
-        continuation = nil
+        if let continuation {
+            continuation.resume()
+            self.continuation = nil
+        } else {
+            isReleased = true
+        }
     }
 }

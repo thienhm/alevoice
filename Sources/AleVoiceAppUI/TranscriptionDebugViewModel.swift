@@ -29,6 +29,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     private let transcribeClosure: @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult
     private var requestToken = 0
     private var pendingGlobalShortcutReleaseConfigURL: URL?
+    private var isGlobalShortcutActivationStarting = false
 
     public init(
         microphonePermissionStatus: @escaping @Sendable () async -> MicrophonePermissionStatus = { .unknown },
@@ -110,6 +111,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             return
         }
 
+        isGlobalShortcutActivationStarting = true
         await startRecording()
     }
 
@@ -118,7 +120,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             return
         }
 
-        if isRunning && !isRecording {
+        if isGlobalShortcutActivationStarting {
             pendingGlobalShortcutReleaseConfigURL = configURL
             return
         }
@@ -143,6 +145,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             isRunning = false
             recordingStatusText = "Recording in progress"
             errorText = nil
+            isGlobalShortcutActivationStarting = false
 
             if let pendingConfigURL = pendingGlobalShortcutReleaseConfigURL {
                 pendingGlobalShortcutReleaseConfigURL = nil
@@ -154,6 +157,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             isRecording = false
             isRunning = false
             recordingStatusText = "Recorder idle"
+            isGlobalShortcutActivationStarting = false
             applyError(error)
         }
     }

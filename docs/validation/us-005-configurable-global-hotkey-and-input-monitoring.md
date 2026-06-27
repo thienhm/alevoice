@@ -12,7 +12,7 @@ Input Monitoring denied.
 
 | Command | Result |
 | --- | --- |
-| `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` | Passed on 2026-06-27 with 66 tests and 0 failures. |
+| `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` | Passed on 2026-06-27 with 67 tests and 0 failures. |
 | `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app --print-bundle-path` | Built, signed, and reported `/Users/alex/workspace/Projects/alevoice/.build/debug/AleVoiceApp.app`. |
 | `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app` | Built, signed, and opened the AleVoiceApp bundle successfully. |
 
