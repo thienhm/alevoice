@@ -87,6 +87,58 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_hotkeyReleaseDuringActivationStopsAfterStartCompletes() async {
+        let gate = AsyncGate()
+        let recordingProbe = RecordingProbe()
+        let transcriptionProbe = TranscriptionProbe()
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {
+                await gate.wait()
+                await recordingProbe.markStart()
+            },
+            stopRecording: {
+                await recordingProbe.markStop()
+                return AudioRecordingResult(audioURL: URL(fileURLWithPath: "/tmp/captured.wav"), byteCount: 123)
+            },
+            transcribe: { configURL, audioURL, mode in
+                await transcriptionProbe.record(configURL: configURL, audioURL: audioURL, mode: mode)
+                return SpeechTranscriptionResult(
+                    engine: .funasr,
+                    modelIdentifier: "sensevoice-small",
+                    transcript: "hello",
+                    latencyMs: 99
+                )
+            }
+        )
+        viewModel.selectedMode = .vi
+
+        let activationTask = Task {
+            await viewModel.handleGlobalShortcutActivation()
+        }
+
+        await Task.yield()
+        XCTAssertTrue(viewModel.isRunning)
+        XCTAssertFalse(viewModel.isRecording)
+
+        await viewModel.handleGlobalShortcutRelease(configURL: URL(fileURLWithPath: "/tmp/config.json"))
+
+        let didStopBeforeStartFinished = await recordingProbe.didStop()
+        XCTAssertFalse(didStopBeforeStartFinished)
+
+        await gate.release()
+        await activationTask.value
+
+        let invocation = await transcriptionProbe.invocation()
+        XCTAssertEqual(invocation?.configURL, URL(fileURLWithPath: "/tmp/config.json"))
+        XCTAssertEqual(invocation?.audioURL, URL(fileURLWithPath: "/tmp/captured.wav"))
+        XCTAssertEqual(invocation?.mode, .vi)
+        let didStop = await recordingProbe.didStop()
+        XCTAssertTrue(didStop)
+        XCTAssertFalse(viewModel.isRecording)
+        XCTAssertEqual(viewModel.transcript, "hello")
+    }
+
+    @MainActor
     func test_hotkeyReleaseAfterFailedActivationPreservesStartErrorAndSkipsTranscription() async {
         let probe = TranscriptionProbe()
         let viewModel = TranscriptionDebugViewModel(

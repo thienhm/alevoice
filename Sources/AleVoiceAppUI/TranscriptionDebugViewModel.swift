@@ -28,6 +28,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     private let stopRecordingClosure: @Sendable () async throws -> AudioRecordingResult
     private let transcribeClosure: @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult
     private var requestToken = 0
+    private var pendingGlobalShortcutReleaseConfigURL: URL?
 
     public init(
         microphonePermissionStatus: @escaping @Sendable () async -> MicrophonePermissionStatus = { .unknown },
@@ -81,6 +82,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func captureShortcut() async {
+        pendingGlobalShortcutReleaseConfigURL = nil
         isCapturingShortcut = true
         shortcutCaptureText = "Press shortcut keys"
 
@@ -112,7 +114,16 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func handleGlobalShortcutRelease(configURL: URL) async {
-        guard !isCapturingShortcut, isRecording else {
+        guard !isCapturingShortcut else {
+            return
+        }
+
+        if isRunning && !isRecording {
+            pendingGlobalShortcutReleaseConfigURL = configURL
+            return
+        }
+
+        guard isRecording else {
             return
         }
 
@@ -132,7 +143,13 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             isRunning = false
             recordingStatusText = "Recording in progress"
             errorText = nil
+
+            if let pendingConfigURL = pendingGlobalShortcutReleaseConfigURL {
+                pendingGlobalShortcutReleaseConfigURL = nil
+                await stopRecordingAndTranscribe(configURL: pendingConfigURL, mode: selectedMode)
+            }
         } catch {
+            pendingGlobalShortcutReleaseConfigURL = nil
             await refreshPermissionStatus()
             isRecording = false
             isRunning = false
