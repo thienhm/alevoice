@@ -2,7 +2,7 @@
 
 ## Status
 
-planned
+implemented
 
 ## Lane
 
@@ -52,15 +52,15 @@ existing microphone recording and transcription path.
 ## Validation
 
 When updating durable proof status, use numeric booleans:
-`scripts/bin/harness-cli story update --id US-005 --unit 1 --integration 1 --e2e 0 --platform 1`.
+`scripts/bin/harness-cli story update --id US-005 --unit 1 --integration 1 --e2e 0 --platform 0`.
 
 | Layer | Expected proof |
 | --- | --- |
 | Unit | Shortcut modeling, persistence, and state-machine tests pass. |
 | Integration | Debug view model applies captured shortcut and routes release to existing transcription path. |
 | E2E | Not required for this slice; no paste automation or overlay yet. |
-| Platform | Configured shortcut starts and stops recording globally on target Mac after Input Monitoring approval. |
-| Release | Validation report records commands, platform proof, and known shortcut limitations. |
+| Platform | Configured shortcut starts and stops recording globally on target Mac after Input Monitoring approval. Current machine proof is blocked while Input Monitoring reports denied. |
+| Release | Validation report records commands, observed UI proof, platform blocker, and known shortcut limitations. |
 
 ## Harness Delta
 
@@ -69,4 +69,8 @@ When updating durable proof status, use numeric booleans:
 
 ## Evidence
 
-Add commands, screenshots, and manual proof after implementation.
+2026-06-27: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` passed with 66 tests and 0 failures. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app --print-bundle-path` built, signed, and reported `.build/debug/AleVoiceApp.app`; `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app` built, signed, and opened the app bundle successfully.
+
+Direct app inspection showed microphone permission and Input Monitoring status rows, `Dictation shortcut: not set`, `Record shortcut`, and `Request / Re-check`. Clicking `Record shortcut` showed `Press shortcut keys` and disabled manual controls. Pressing `Control+Space` while capture mode was active updated the UI to `Dictation shortcut: Control+Space`, and persisted shortcut data exists in app defaults after capture. Clicking `Transcribe en-001 sample` rendered `404 ms` and `open terminal and show get status`.
+
+Platform global hold/release proof is not claimed for this run: clicking `Request / Re-check` changed visible status to `Input Monitoring: denied` on this machine, so holding the configured shortcut globally could not be truthfully verified to start recording or release/transcribe.
