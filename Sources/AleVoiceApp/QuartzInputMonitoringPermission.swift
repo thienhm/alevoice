@@ -38,6 +38,11 @@ struct QuartzInputMonitoringPermission: @unchecked Sendable {
     }
 
     func requestAccess() -> InputMonitoringPermissionStatus {
+        if preflightListenEventAccess() {
+            userDefaults.set(false, forKey: requestAttemptKey)
+            return .authorized
+        }
+
         userDefaults.set(true, forKey: requestAttemptKey)
 
         if requestListenEventAccess() {
@@ -50,6 +55,6 @@ struct QuartzInputMonitoringPermission: @unchecked Sendable {
             return .authorized
         }
 
-        return .denied
+        return .unknown
     }
 }

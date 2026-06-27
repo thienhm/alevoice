@@ -32,7 +32,7 @@ paste automation.
 - Paste failures surface as visible errors without clearing the transcript.
 - Clipboard preservation is best-effort for plain string contents in this
   slice.
-- Overlay UI and formatting-command normalization remain out of scope.
+- Overlay UI and formatting-command normalization are covered by `US-007`.
 
 ## Design Notes
 
@@ -72,4 +72,8 @@ When updating durable proof status, use numeric booleans:
 
 2026-06-27: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` passed with 78 tests and 0 failures. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app --print-bundle-path` built, ad-hoc signed, and reported `.build/debug/AleVoiceApp.app`. Automated coverage now includes `TranscriptOutputServiceTests`, `ClipboardPasteTranscriptOutputTests`, and updated debug view-model tests proving that successful recording transcription routes through paste output, sample transcription stays display-only, and output failures keep the transcript visible while surfacing an error.
 
-App wiring now exposes an `Accessibility: <status>` row with refresh/request actions, and successful recording transcription delegates to a clipboard-backed `Cmd+V` output adapter. Manual focused-text-field validation is still pending for this slice.
+App wiring now exposes an `Accessibility: <status>` row with refresh/request actions, and successful recording transcription delegates to a clipboard-backed `Cmd+V` output adapter.
+
+2026-06-27 menu bar MVP follow-up: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` passed with 87 tests and 0 failures after adding Auto-only formatted recording delivery. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app --print-bundle-path` built, ad-hoc signed, and reported `.build/debug/AleVoiceApp.app`. Local inspection confirmed the app runs as a background/accessory process and the menu bar settings window reports `Accessibility: not determined` for the rebuilt ad-hoc bundle. Final app-driven focused-field paste proof still requires granting Accessibility permission to `dev.alevoice.AleVoiceApp`.
+
+2026-06-27 validation closeout follow-up: `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test` passed with 94 tests and 0 failures, `rtk ./scripts/bin/harness-cli story verify US-007` passed, System Events confirmed the live `.build/arm64-apple-macosx/debug/AleVoiceApp.app/Contents/MacOS/AleVoiceApp` process is a background-only resident app with a `waveform` status menu, and opening `AleVoice Settings` showed `Microphone permission: not determined`, `Accessibility: not determined`, and `Input Monitoring: not determined`. Final focused-field paste proof still requires granting at least Microphone and Accessibility to `dev.alevoice.AleVoiceApp`, then rerunning live recording/paste validation.

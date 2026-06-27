@@ -55,6 +55,7 @@ public struct AudioRecordingFinalizeResult: Equatable, Sendable {
 
 public protocol AudioRecordingDriver: Sendable {
     func microphonePermissionStatus() async -> MicrophonePermissionStatus
+    func requestMicrophonePermission() async -> MicrophonePermissionStatus
     func requestRecordPermission() async -> Bool
     func startRecording(to url: URL) throws
     func stopRecording() throws -> AudioRecordingFinalizeResult
@@ -89,6 +90,10 @@ public actor AudioRecorder {
 
     public func microphonePermissionStatus() async -> MicrophonePermissionStatus {
         await driver.microphonePermissionStatus()
+    }
+
+    public func requestMicrophonePermission() async -> MicrophonePermissionStatus {
+        await driver.requestMicrophonePermission()
     }
 
     public func start() async throws {
@@ -182,6 +187,22 @@ public final class AVFoundationAudioRecordingDriver: NSObject, AudioRecordingDri
             return await AVCaptureDevice.requestAccess(for: .audio)
         @unknown default:
             return false
+        }
+    }
+
+    public func requestMicrophonePermission() async -> MicrophonePermissionStatus {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            return .authorized
+        case .denied:
+            return .denied
+        case .restricted:
+            return .restricted
+        case .notDetermined:
+            let granted = await AVCaptureDevice.requestAccess(for: .audio)
+            return granted ? .authorized : .denied
+        @unknown default:
+            return .unknown
         }
     }
 

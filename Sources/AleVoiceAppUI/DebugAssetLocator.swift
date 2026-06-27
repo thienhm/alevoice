@@ -29,6 +29,13 @@ public struct DebugAssetLocator {
             return currentDirectoryCandidate
         }
 
+        let bundledResourceCandidate = bundleURL
+            .appendingPathComponent("Contents/Resources", isDirectory: true)
+            .appendingPathComponent(relativePath)
+        if fileManager.fileExists(atPath: bundledResourceCandidate.path) {
+            return bundledResourceCandidate
+        }
+
         let repositoryCandidate = repositoryRootURL().appendingPathComponent(relativePath)
         if fileManager.fileExists(atPath: repositoryCandidate.path) {
             return repositoryCandidate

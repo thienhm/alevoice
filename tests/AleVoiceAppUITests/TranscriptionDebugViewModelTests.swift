@@ -32,6 +32,20 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_requestMicrophonePermissionUpdatesStatusText() async throws {
+        let viewModel = TranscriptionDebugViewModel(
+            requestMicrophonePermission: { .authorized },
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+
+        await viewModel.requestMicrophonePermission()
+
+        XCTAssertEqual(viewModel.permissionStatusText, "Microphone permission: authorized")
+    }
+
+    @MainActor
     func test_startRecordingUpdatesRecordingState() async throws {
         let probe = RecordingProbe()
         let viewModel = TranscriptionDebugViewModel(
@@ -108,7 +122,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func test_stopRecordingTranscribesCapturedAudioWithExplicitMode() async throws {
+    func test_stopRecordingUsesAutoModeForMvpRecordingFlow() async throws {
         let capturedURL = URL(fileURLWithPath: "/tmp/captured.wav")
         let probe = TranscriptionProbe()
         let viewModel = TranscriptionDebugViewModel(
@@ -136,7 +150,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
         let invocation = await probe.invocation()
         XCTAssertEqual(invocation?.configURL, URL(fileURLWithPath: "/tmp/config.json"))
         XCTAssertEqual(invocation?.audioURL, capturedURL)
-        XCTAssertEqual(invocation?.mode, .vi)
+        XCTAssertEqual(invocation?.mode, .auto)
         XCTAssertFalse(viewModel.isRecording)
         XCTAssertEqual(viewModel.recordingStatusText, "Last recording ready")
         XCTAssertEqual(viewModel.transcript, "captured speech")
@@ -175,6 +189,76 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
         XCTAssertEqual(delivered, ["paste me"])
         XCTAssertEqual(viewModel.transcript, "paste me")
         XCTAssertNil(viewModel.errorText)
+    }
+
+    @MainActor
+    func test_stopRecordingFormatsTranscriptBeforeDelivery() async throws {
+        let outputProbe = TranscriptOutputProbe()
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {},
+            stopRecording: {
+                AudioRecordingResult(audioURL: URL(fileURLWithPath: "/tmp/captured.wav"), byteCount: 4_096)
+            },
+            transcribe: { _, _, _ async throws in
+                SpeechTranscriptionResult(
+                    engine: .funasr,
+                    modelIdentifier: "sensevoice-small",
+                    transcript: "new line benchmark summary colon faster period",
+                    latencyMs: 456
+                )
+            },
+            deliverTranscript: { transcript in
+                await outputProbe.record(transcript)
+            }
+        )
+
+        await viewModel.startRecording()
+        await viewModel.stopRecordingAndTranscribe(
+            configURL: URL(fileURLWithPath: "/tmp/config.json"),
+            mode: .auto
+        )
+
+        let delivered = await outputProbe.transcripts()
+        XCTAssertEqual(delivered, ["\nbenchmark summary: faster."])
+        XCTAssertEqual(viewModel.transcript, "\nbenchmark summary: faster.")
+    }
+
+    @MainActor
+    func test_sessionStateTracksRecordingProcessingAndSuccess() async throws {
+        let gate = AsyncGate()
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {},
+            stopRecording: {
+                AudioRecordingResult(audioURL: URL(fileURLWithPath: "/tmp/captured.wav"), byteCount: 4_096)
+            },
+            transcribe: { _, _, _ async throws in
+                await gate.wait()
+                return SpeechTranscriptionResult(
+                    engine: .funasr,
+                    modelIdentifier: "sensevoice-small",
+                    transcript: "done",
+                    latencyMs: 456
+                )
+            }
+        )
+
+        await viewModel.startRecording()
+        XCTAssertEqual(viewModel.sessionState, .recording)
+
+        let task = Task {
+            await viewModel.stopRecordingAndTranscribe(
+                configURL: URL(fileURLWithPath: "/tmp/config.json"),
+                mode: .auto
+            )
+        }
+
+        await Task.yield()
+        XCTAssertEqual(viewModel.sessionState, .processing)
+
+        await gate.release()
+        await task.value
+
+        XCTAssertEqual(viewModel.sessionState, .success("done"))
     }
 
     @MainActor
@@ -235,6 +319,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isRunning)
         XCTAssertEqual(viewModel.recordingStatusText, "Recorder idle")
         XCTAssertEqual(viewModel.errorText, "Microphone permission denied")
+        XCTAssertEqual(viewModel.sessionState, .error("Microphone permission denied"))
     }
 
     @MainActor
@@ -485,15 +570,25 @@ private actor TranscriptOutputProbe {
 
 private actor AsyncGate {
     private var continuation: CheckedContinuation<Void, Never>?
+    private var isReleased = false
 
     func wait() async {
+        if isReleased {
+            isReleased = false
+            return
+        }
+
         await withCheckedContinuation { continuation in
             self.continuation = continuation
         }
     }
 
     func release() {
-        continuation?.resume()
-        continuation = nil
+        if let continuation {
+            continuation.resume()
+            self.continuation = nil
+        } else {
+            isReleased = true
+        }
     }
 }

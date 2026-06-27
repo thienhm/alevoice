@@ -1,18 +1,21 @@
 import AleVoiceAppUI
 import AleVoiceCore
 import AppKit
+import Combine
 import SwiftUI
 
 @MainActor
 @main
 struct AleVoiceApp: App {
     @StateObject private var viewModel: TranscriptionDebugViewModel
+    @StateObject private var shellModel: MenuBarShellModel
     private let assetLocator: DebugAssetLocator
     private let hotkeyMonitor: QuartzHotkeyMonitor
+    private let menuBarController: MenuBarController
+    private let sessionStateObserver: AnyCancellable
 
     init() {
-        NSApplication.shared.setActivationPolicy(.regular)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.setActivationPolicy(.accessory)
 
         let audioRecorder = AudioRecorder()
         let shortcutStore = UserDefaultsDictationShortcutStore()
@@ -21,6 +24,14 @@ struct AleVoiceApp: App {
         let shortcutCaptureController = QuartzShortcutCaptureController()
         let assetLocator = DebugAssetLocator()
         let hotkeyMonitor = QuartzHotkeyMonitor()
+        let shellModel = MenuBarShellModel()
+        let menuBarController = MenuBarController(
+            statusItem: nil,
+            updateShell: { presentation in
+                shellModel.title = presentation.title
+                shellModel.isRecordingIndicatorVisible = presentation.isRecordingIndicatorVisible
+            }
+        )
         let pasteOutput = ClipboardPasteTranscriptOutput(
             accessibilityStatus: { accessibilityPermission.status() }
         )
@@ -32,6 +43,9 @@ struct AleVoiceApp: App {
         let viewModel = TranscriptionDebugViewModel(
             microphonePermissionStatus: {
                 await audioRecorder.microphonePermissionStatus()
+            },
+            requestMicrophonePermission: {
+                await audioRecorder.requestMicrophonePermission()
             },
             accessibilityPermissionStatus: {
                 accessibilityPermission.status()
@@ -60,6 +74,12 @@ struct AleVoiceApp: App {
                     }
                 }
                 return status
+            },
+            openAccessibilitySettings: {
+                PermissionSettingsOpener.openAccessibility()
+            },
+            openInputMonitoringSettings: {
+                PermissionSettingsOpener.openInputMonitoring()
             },
             loadShortcut: {
                 shortcutStore.load()
@@ -109,17 +129,63 @@ struct AleVoiceApp: App {
             hotkeyMonitor.start()
         }
 
+        let sessionStateObserver = viewModel.$sessionState.sink { state in
+            menuBarController.render(
+                state: state,
+                microphoneText: viewModel.permissionStatusText,
+                accessibilityText: viewModel.accessibilityStatusText,
+                inputMonitoringText: viewModel.inputMonitoringStatusText,
+                shortcutText: viewModel.shortcutDisplayText
+            )
+        }
+        menuBarController.render(
+            state: viewModel.sessionState,
+            microphoneText: viewModel.permissionStatusText,
+            accessibilityText: viewModel.accessibilityStatusText,
+            inputMonitoringText: viewModel.inputMonitoringStatusText,
+            shortcutText: viewModel.shortcutDisplayText
+        )
+
         _viewModel = StateObject(wrappedValue: viewModel)
+        _shellModel = StateObject(wrappedValue: shellModel)
         self.assetLocator = assetLocator
         self.hotkeyMonitor = hotkeyMonitor
+        self.menuBarController = menuBarController
+        self.sessionStateObserver = sessionStateObserver
     }
 
     var body: some Scene {
-        WindowGroup {
+        MenuBarExtra {
+            MenuBarMenuView(viewModel: viewModel)
+        } label: {
+            Label {
+                Text(shellModel.title)
+            } icon: {
+                Image(systemName: "waveform")
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(shellModel.isRecordingIndicatorVisible ? Color.red : Color.primary)
+            }
+        }
+
+        Window("AleVoice Settings", id: "settings") {
             ContentView(viewModel: viewModel, assetLocator: assetLocator)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                     hotkeyMonitor.stop()
                 }
         }
+        .defaultSize(width: 560, height: 320)
+    }
+}
+
+private enum PermissionSettingsOpener {
+    private static let accessibilityURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+    private static let inputMonitoringURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!
+
+    static func openAccessibility(workspace: NSWorkspace = .shared) {
+        workspace.open(accessibilityURL)
+    }
+
+    static func openInputMonitoring(workspace: NSWorkspace = .shared) {
+        workspace.open(inputMonitoringURL)
     }
 }
