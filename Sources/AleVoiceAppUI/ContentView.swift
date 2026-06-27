@@ -17,6 +17,8 @@ public struct ContentView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Text("Dictation mode: Auto")
+
             HStack(spacing: 12) {
                 Text(viewModel.permissionStatusText)
                 Button("Refresh permission status") {
@@ -68,13 +70,6 @@ public struct ContentView: View {
                 Text(viewModel.shortcutCaptureText)
             }
 
-            Picker("Language mode", selection: $viewModel.selectedMode) {
-                Text("Auto").tag(SpeechLanguageMode.auto)
-                Text("English").tag(SpeechLanguageMode.en)
-                Text("Vietnamese").tag(SpeechLanguageMode.vi)
-            }
-            .pickerStyle(.segmented)
-
             HStack(spacing: 12) {
                 Button("Start microphone capture") {
                     Task {
@@ -85,10 +80,7 @@ public struct ContentView: View {
 
                 Button("Stop and transcribe recording") {
                     Task {
-                        await viewModel.stopRecordingAndTranscribe(
-                            configURL: configURL,
-                            mode: viewModel.selectedMode
-                        )
+                        await viewModel.stopRecordingAndTranscribe(configURL: configURL)
                     }
                 }
                 .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || !viewModel.isRecording)

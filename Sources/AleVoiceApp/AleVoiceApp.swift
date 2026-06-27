@@ -1,18 +1,22 @@
 import AleVoiceAppUI
 import AleVoiceCore
 import AppKit
+import Combine
 import SwiftUI
 
 @MainActor
 @main
 struct AleVoiceApp: App {
     @StateObject private var viewModel: TranscriptionDebugViewModel
+    @StateObject private var shellModel: MenuBarShellModel
     private let assetLocator: DebugAssetLocator
     private let hotkeyMonitor: QuartzHotkeyMonitor
+    private let menuBarController: MenuBarController
+    private let overlayController: OverlayWindowController
+    private let sessionStateObserver: AnyCancellable
 
     init() {
-        NSApplication.shared.setActivationPolicy(.regular)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.setActivationPolicy(.accessory)
 
         let audioRecorder = AudioRecorder()
         let shortcutStore = UserDefaultsDictationShortcutStore()
@@ -21,6 +25,14 @@ struct AleVoiceApp: App {
         let shortcutCaptureController = QuartzShortcutCaptureController()
         let assetLocator = DebugAssetLocator()
         let hotkeyMonitor = QuartzHotkeyMonitor()
+        let shellModel = MenuBarShellModel()
+        let menuBarController = MenuBarController(
+            statusItem: nil,
+            setTitle: { title in
+                shellModel.title = title
+            }
+        )
+        let overlayController = OverlayWindowController()
         let pasteOutput = ClipboardPasteTranscriptOutput(
             accessibilityStatus: { accessibilityPermission.status() }
         )
@@ -109,17 +121,44 @@ struct AleVoiceApp: App {
             hotkeyMonitor.start()
         }
 
+        let sessionStateObserver = viewModel.$sessionState.sink { state in
+            menuBarController.render(
+                state: state,
+                microphoneText: viewModel.permissionStatusText,
+                accessibilityText: viewModel.accessibilityStatusText,
+                inputMonitoringText: viewModel.inputMonitoringStatusText,
+                shortcutText: viewModel.shortcutDisplayText
+            )
+            overlayController.render(state: state)
+        }
+        menuBarController.render(
+            state: viewModel.sessionState,
+            microphoneText: viewModel.permissionStatusText,
+            accessibilityText: viewModel.accessibilityStatusText,
+            inputMonitoringText: viewModel.inputMonitoringStatusText,
+            shortcutText: viewModel.shortcutDisplayText
+        )
+
         _viewModel = StateObject(wrappedValue: viewModel)
+        _shellModel = StateObject(wrappedValue: shellModel)
         self.assetLocator = assetLocator
         self.hotkeyMonitor = hotkeyMonitor
+        self.menuBarController = menuBarController
+        self.overlayController = overlayController
+        self.sessionStateObserver = sessionStateObserver
     }
 
     var body: some Scene {
-        WindowGroup {
+        MenuBarExtra(shellModel.title, systemImage: "waveform") {
+            MenuBarMenuView(viewModel: viewModel)
+        }
+
+        Window("AleVoice Settings", id: "settings") {
             ContentView(viewModel: viewModel, assetLocator: assetLocator)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                     hotkeyMonitor.stop()
                 }
         }
+        .defaultSize(width: 560, height: 320)
     }
 }
