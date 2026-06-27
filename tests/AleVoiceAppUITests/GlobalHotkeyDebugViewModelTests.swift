@@ -83,7 +83,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func test_hotkeyReleaseUsesSelectedMode() async throws {
+    func test_hotkeyReleaseAlwaysUsesAutoModeForMvp() async throws {
         let probe = TranscriptionProbe()
         let shortcut = try! DictationShortcut(modifiers: [.control], primaryKey: .space)
         let viewModel = TranscriptionDebugViewModel(
@@ -107,7 +107,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         await viewModel.handleGlobalShortcutRelease(configURL: URL(fileURLWithPath: "/tmp/config.json"))
 
         let invocation = await probe.invocation()
-        XCTAssertEqual(invocation?.mode, .vi)
+        XCTAssertEqual(invocation?.mode, .auto)
     }
 
     @MainActor
@@ -159,7 +159,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         let invocation = await transcriptionProbe.invocation()
         XCTAssertEqual(invocation?.configURL, URL(fileURLWithPath: "/tmp/config.json"))
         XCTAssertEqual(invocation?.audioURL, URL(fileURLWithPath: "/tmp/captured.wav"))
-        XCTAssertEqual(invocation?.mode, .vi)
+        XCTAssertEqual(invocation?.mode, .auto)
         let didStop = await recordingProbe.didStop()
         XCTAssertTrue(didStop)
         XCTAssertFalse(viewModel.isRecording)

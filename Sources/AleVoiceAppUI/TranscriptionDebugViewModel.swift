@@ -4,6 +4,7 @@ import Foundation
 
 @MainActor
 public final class TranscriptionDebugViewModel: ObservableObject {
+    @Published public private(set) var sessionState: DictationSessionState = .idle
     @Published public private(set) var transcript: String = ""
     @Published public private(set) var latencyText: String = ""
     @Published public private(set) var errorText: String?
@@ -29,6 +30,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     private let onShortcutChangeClosure: @Sendable (DictationShortcut?) -> Void
     private let startRecordingClosure: @Sendable () async throws -> Void
     private let stopRecordingClosure: @Sendable () async throws -> AudioRecordingResult
+    private let transcriptFormatter: TranscriptFormatter
     private let transcribeClosure: @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult
     private let deliverTranscriptClosure: @Sendable (String) async throws -> Void
     private var requestToken = 0
@@ -53,6 +55,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         stopRecording: @escaping @Sendable () async throws -> AudioRecordingResult = {
             throw AudioRecorderError.notRecording
         },
+        transcriptFormatter: TranscriptFormatter = TranscriptFormatter(),
         transcribe: @escaping @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult,
         deliverTranscript: @escaping @Sendable (String) async throws -> Void = { _ in }
     ) {
@@ -67,6 +70,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         self.onShortcutChangeClosure = onShortcutChange
         self.startRecordingClosure = startRecording
         self.stopRecordingClosure = stopRecording
+        self.transcriptFormatter = transcriptFormatter
         self.transcribeClosure = transcribe
         self.deliverTranscriptClosure = deliverTranscript
     }
@@ -149,7 +153,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             return
         }
 
-        await stopRecordingAndTranscribe(configURL: configURL, mode: selectedMode)
+        await stopRecordingAndTranscribe(configURL: configURL)
     }
 
     public func startRecording() async {
@@ -166,10 +170,11 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             recordingStatusText = "Recording in progress"
             errorText = nil
             isGlobalShortcutActivationStarting = false
+            sessionState = .recording
 
             if let pendingConfigURL = pendingGlobalShortcutReleaseConfigURL {
                 pendingGlobalShortcutReleaseConfigURL = nil
-                await stopRecordingAndTranscribe(configURL: pendingConfigURL, mode: selectedMode)
+                await stopRecordingAndTranscribe(configURL: pendingConfigURL)
             }
         } catch {
             pendingGlobalShortcutReleaseConfigURL = nil
@@ -182,7 +187,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         }
     }
 
-    public func stopRecordingAndTranscribe(configURL: URL, mode: SpeechLanguageMode) async {
+    public func stopRecordingAndTranscribe(configURL: URL, mode: SpeechLanguageMode = .auto) async {
         guard !isCapturingShortcut else {
             return
         }
@@ -195,6 +200,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         requestToken += 1
         let token = requestToken
         isRunning = true
+        sessionState = .processing
 
         do {
             let recording = try await stopRecordingClosure()
@@ -204,15 +210,16 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             isRecording = false
             recordingStatusText = "Transcribing recording"
 
-            let result = try await transcribeClosure(configURL, recording.audioURL, mode)
+            let result = try await transcribeClosure(configURL, recording.audioURL, .auto)
             guard token == requestToken else {
                 return
             }
-            transcript = result.transcript
+            let formattedTranscript = transcriptFormatter.format(result.transcript)
+            transcript = formattedTranscript
             latencyText = "\(result.latencyMs) ms"
             recordingStatusText = "Last recording ready"
             do {
-                try await deliverTranscriptClosure(result.transcript)
+                try await deliverTranscriptClosure(formattedTranscript)
             } catch {
                 applyError(error)
                 isRunning = false
@@ -220,6 +227,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             }
             errorText = nil
             isRunning = false
+            sessionState = .success(formattedTranscript)
         } catch {
             guard token == requestToken else {
                 return
@@ -272,10 +280,12 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         if let localizedError = error as? LocalizedError,
            let description = localizedError.errorDescription {
             errorText = description
+            sessionState = .error(description)
             return
         }
 
         errorText = String(describing: error)
+        sessionState = .error(errorText ?? String(describing: error))
     }
 
     private func applyShortcut(_ shortcut: DictationShortcut?) {
