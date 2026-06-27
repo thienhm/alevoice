@@ -3,6 +3,7 @@ import AleVoiceCore
 import AppKit
 import SwiftUI
 
+@MainActor
 @main
 struct AleVoiceApp: App {
     @StateObject private var viewModel: TranscriptionDebugViewModel
@@ -26,13 +27,23 @@ struct AleVoiceApp: App {
                 await audioRecorder.microphonePermissionStatus()
             },
             inputMonitoringPermissionStatus: {
-                inputMonitoringPermission.status()
+                let status = inputMonitoringPermission.status()
+                await MainActor.run {
+                    if status == .authorized {
+                        hotkeyMonitor.start()
+                    } else {
+                        hotkeyMonitor.stop()
+                    }
+                }
+                return status
             },
             requestInputMonitoringPermission: {
                 let status = inputMonitoringPermission.requestAccess()
-                if status == .authorized {
-                    Task { @MainActor in
+                await MainActor.run {
+                    if status == .authorized {
                         hotkeyMonitor.start()
+                    } else {
+                        hotkeyMonitor.stop()
                     }
                 }
                 return status
@@ -46,9 +57,8 @@ struct AleVoiceApp: App {
             saveShortcut: {
                 try shortcutStore.save($0)
             },
-            onShortcutChange: {
-                let shortcut = $0
-                Task { @MainActor in
+            onShortcutChange: { shortcut in
+                MainActor.assumeIsolated {
                     hotkeyMonitor.updateShortcut(shortcut)
                 }
             },
@@ -79,7 +89,9 @@ struct AleVoiceApp: App {
         }
 
         hotkeyMonitor.updateShortcut(shortcutStore.load())
-        hotkeyMonitor.start()
+        if inputMonitoringPermission.status() == .authorized {
+            hotkeyMonitor.start()
+        }
 
         _viewModel = StateObject(wrappedValue: viewModel)
         self.assetLocator = assetLocator

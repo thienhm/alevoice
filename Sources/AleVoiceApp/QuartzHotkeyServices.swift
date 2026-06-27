@@ -11,6 +11,13 @@ final class QuartzHotkeyMonitor {
     private var stateMachine: GlobalHotkeyStateMachine?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var retainedUserInfo: UnsafeMutableRawPointer?
+
+    deinit {
+        MainActor.assumeIsolated {
+            stop()
+        }
+    }
 
     func updateShortcut(_ shortcut: DictationShortcut?) {
         self.shortcut = shortcut
@@ -22,10 +29,14 @@ final class QuartzHotkeyMonitor {
             return
         }
 
+        stateMachine = shortcut.map(GlobalHotkeyStateMachine.init)
+
         let eventMask =
             (CGEventMask(1) << CGEventType.keyDown.rawValue) |
             (CGEventMask(1) << CGEventType.keyUp.rawValue) |
             (CGEventMask(1) << CGEventType.flagsChanged.rawValue)
+
+        let retainedUserInfo = Unmanaged.passRetained(self).toOpaque()
 
         let callback: CGEventTapCallBack = { _, type, event, userInfo in
             guard let userInfo else {
@@ -43,17 +54,36 @@ final class QuartzHotkeyMonitor {
             options: .listenOnly,
             eventsOfInterest: eventMask,
             callback: callback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
+            userInfo: retainedUserInfo
         ) else {
+            Unmanaged<QuartzHotkeyMonitor>.fromOpaque(retainedUserInfo).release()
             return
         }
 
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        guard let source else {
+            Self.teardown(eventTap: tap, runLoopSource: nil, retainedUserInfo: retainedUserInfo)
+            return
+        }
+
         eventTap = tap
         runLoopSource = source
+        self.retainedUserInfo = retainedUserInfo
 
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+    }
+
+    func stop() {
+        Self.teardown(
+            eventTap: eventTap,
+            runLoopSource: runLoopSource,
+            retainedUserInfo: retainedUserInfo
+        )
+        eventTap = nil
+        runLoopSource = nil
+        retainedUserInfo = nil
+        stateMachine = nil
     }
 
     func handle(type: CGEventType, event: CGEvent) {
@@ -120,6 +150,25 @@ final class QuartzHotkeyMonitor {
             keyCode: keyCode,
             modifiers: DictationShortcut.ModifierSet(cgEventFlags: event.flags)
         )
+    }
+
+    nonisolated private static func teardown(
+        eventTap: CFMachPort?,
+        runLoopSource: CFRunLoopSource?,
+        retainedUserInfo: UnsafeMutableRawPointer?
+    ) {
+        if let runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        }
+
+        if let eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: false)
+            CFMachPortInvalidate(eventTap)
+        }
+
+        if let retainedUserInfo {
+            Unmanaged<QuartzHotkeyMonitor>.fromOpaque(retainedUserInfo).release()
+        }
     }
 }
 
