@@ -33,6 +33,11 @@ public struct ContentView: View {
                         await viewModel.refreshInputMonitoringStatus()
                     }
                 }
+                Button("Request / Re-check") {
+                    Task {
+                        await viewModel.requestInputMonitoringPermission()
+                    }
+                }
             }
 
             HStack(spacing: 12) {
@@ -62,7 +67,7 @@ public struct ContentView: View {
                         await viewModel.startRecording()
                     }
                 }
-                .disabled(viewModel.isRunning || viewModel.isRecording)
+                .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || viewModel.isRecording)
 
                 Button("Stop and transcribe recording") {
                     Task {
@@ -72,7 +77,7 @@ public struct ContentView: View {
                         )
                     }
                 }
-                .disabled(viewModel.isRunning || !viewModel.isRecording)
+                .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || !viewModel.isRecording)
             }
 
             Button("Transcribe en-001 sample") {
@@ -84,7 +89,7 @@ public struct ContentView: View {
                     )
                 }
             }
-            .disabled(viewModel.isRunning || viewModel.isRecording)
+            .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || viewModel.isRecording)
 
             Text(viewModel.recordingStatusText)
             Text(viewModel.latencyText)

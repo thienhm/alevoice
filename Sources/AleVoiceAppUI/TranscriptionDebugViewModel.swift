@@ -112,7 +112,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func handleGlobalShortcutRelease(configURL: URL) async {
-        guard !isCapturingShortcut else {
+        guard !isCapturingShortcut, isRecording else {
             return
         }
 
@@ -120,6 +120,10 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func startRecording() async {
+        guard !isCapturingShortcut else {
+            return
+        }
+
         isRunning = true
         do {
             try await startRecordingClosure()
@@ -138,6 +142,10 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func stopRecordingAndTranscribe(configURL: URL, mode: SpeechLanguageMode) async {
+        guard !isCapturingShortcut else {
+            return
+        }
+
         guard isRecording else {
             applyError(AudioRecorderError.notRecording)
             return
@@ -178,6 +186,10 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func runSample(configURL: URL, audioURL: URL, mode: SpeechLanguageMode) async {
+        guard !isCapturingShortcut else {
+            return
+        }
+
         guard !isRecording else {
             applyError(AudioRecorderError.alreadyRecording)
             isRunning = false
