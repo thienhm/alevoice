@@ -18,6 +18,10 @@ scripts/bin/harness-cli.exe
 tools/benchmarks/stt_models.json
 tmp/funasr-runtime/
 tmp/stt-models/
+tmp/stt-benchmarks/
+
+# macOS metadata.
+.DS_Store
 
 # Local native speech-engine config override.
 Config/speech-engine.json
