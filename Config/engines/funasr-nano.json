@@ -34,7 +34,7 @@
       },
       "configTemplate": {
         "defaultMode": "auto",
-        "supportedModes": ["auto", "en", "vi"]
+        "supportedModes": ["auto", "en"]
       }
     }
   }

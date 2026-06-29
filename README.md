@@ -87,6 +87,8 @@ sample transcription path.
 - Runs locally on macOS 14 or newer.
 - Lives in the menu bar as a resident utility.
 - Lets the user choose an installed local model and a supported language mode.
+  The current pinned Nano GGUF setup exposes `auto` and `en`; Vietnamese needs a
+  future MLT-capable runtime/model.
 - Records while the configured shortcut is held.
 - Transcribes after release through the configured local FunASR runtime.
 - Normalizes a small English/Vietnamese formatting command set.
@@ -96,9 +98,9 @@ sample transcription path.
 - Keeps sample-audio transcription display-only.
 
 Caret-relative overlay placement, notarized packaging, and installer polish are
-intentionally out of scope for the current MVP. Explicit Nano language forcing
-still depends on the pinned runtime surface; AleVoice only exposes modes
-declared by the installed engine config.
+intentionally out of scope for the current MVP. Explicit language choices still
+depend on the pinned runtime/model surface; AleVoice only exposes modes declared
+by the installed engine config.
 
 ## Repository Shape
 

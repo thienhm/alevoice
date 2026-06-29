@@ -71,6 +71,6 @@ Define the current native macOS dictation workflow for the menu bar MVP.
 ## Runtime Caveat
 
 - SenseVoice currently remains Auto-only in the pinned local config.
-- Nano may declare `auto`, `en`, and `vi` support in config, but any explicit
-  runtime forcing must still match the pinned binary surface. AleVoice should
-  only expose modes that are actually declared by installed engine metadata.
+- The pinned Fun-ASR-Nano GGUF setup declares `auto` and `en` only. Vietnamese
+  should stay hidden until AleVoice adds an MLT-capable runtime/model whose
+  installed metadata proves `vi` support.

@@ -38,7 +38,7 @@ final class SpeechEngineConfigTests: XCTestCase {
         try """
         {
           "selectedEngine": "funasr-nano",
-          "selectedMode": "vi",
+          "selectedMode": "en",
           "engines": {
             "funasr-nano": {
               "engineKind": "funasr",
@@ -49,7 +49,7 @@ final class SpeechEngineConfigTests: XCTestCase {
                 "encoder": "/tmp/managed/funasr-encoder-f16.gguf"
               },
               "defaultMode": "auto",
-              "supportedModes": ["auto", "en", "vi"]
+              "supportedModes": ["auto", "en"]
             }
           }
         }
@@ -58,9 +58,9 @@ final class SpeechEngineConfigTests: XCTestCase {
         let settings = try SpeechEngineSettings.load(from: url)
 
         XCTAssertEqual(settings.selectedEngineID, "funasr-nano")
-        XCTAssertEqual(settings.selectedMode, .vi)
+        XCTAssertEqual(settings.selectedMode, .en)
         XCTAssertEqual(settings.selectedEngineConfig.displayName, "FunASR Nano")
-        XCTAssertEqual(settings.selectedEngineConfig.supportedModes, [.auto, .en, .vi])
+        XCTAssertEqual(settings.selectedEngineConfig.supportedModes, [.auto, .en])
         XCTAssertEqual(settings.selectedEngineConfig.auxiliaryModelPaths["encoder"], "/tmp/managed/funasr-encoder-f16.gguf")
         XCTAssertEqual(settings.funasr.auxiliaryModelPaths["encoder"], "/tmp/managed/funasr-encoder-f16.gguf")
     }
@@ -170,7 +170,7 @@ final class SpeechEngineConfigTests: XCTestCase {
               "binaryPath": "/tmp/funasr",
               "modelPath": "/tmp/funasr.gguf",
               "defaultMode": "en",
-              "supportedModes": ["auto", "en", "vi"]
+              "supportedModes": ["auto", "en"]
             }
           }
         }

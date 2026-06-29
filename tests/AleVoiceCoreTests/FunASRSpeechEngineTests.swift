@@ -46,13 +46,13 @@ final class FunASRSpeechEngineTests: XCTestCase {
             binaryPath: "/tmp/llama-funasr-cli",
             modelPath: "/tmp/qwen3-0.6b-q4km.gguf",
             defaultMode: .auto,
-            supportedModes: [.auto, .en, .vi],
+            supportedModes: [.auto, .en],
             auxiliaryModelPaths: ["encoder": "/tmp/funasr-encoder-f16.gguf"]
         )
         let engine = FunASRSpeechEngine(config: config, runner: FakeRunner())
         let request = SpeechTranscriptionRequest(
-            audioURL: URL(fileURLWithPath: "/tmp/vi-001.wav"),
-            mode: .vi
+            audioURL: URL(fileURLWithPath: "/tmp/en-001.wav"),
+            mode: .en
         )
 
         XCTAssertEqual(
@@ -64,7 +64,7 @@ final class FunASRSpeechEngineTests: XCTestCase {
                 "-m",
                 "/tmp/qwen3-0.6b-q4km.gguf",
                 "-a",
-                "/tmp/vi-001.wav",
+                "/tmp/en-001.wav",
             ]
         )
     }

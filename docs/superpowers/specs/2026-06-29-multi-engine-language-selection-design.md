@@ -173,7 +173,7 @@ Proposed shape:
         "encoder": ".../funasr-encoder-f16.gguf"
       },
       "defaultMode": "auto",
-      "supportedModes": ["auto", "en", "vi"]
+      "supportedModes": ["auto", "en"]
     }
   }
 }

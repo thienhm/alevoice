@@ -151,7 +151,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         viewModel.applySpeechEngineSettings(
             SpeechEngineSettings(
                 selectedEngineID: "funasr-nano",
-                selectedMode: .vi,
+                selectedMode: .en,
                 engines: [
                     "funasr-nano": EngineInstallConfig(
                         engineKind: .funasr,
@@ -159,7 +159,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
                         binaryPath: "/tmp/llama-funasr-cli",
                         modelPath: "/tmp/model.gguf",
                         defaultMode: .auto,
-                        supportedModes: [.auto, .en, .vi]
+                        supportedModes: [.auto, .en]
                     ),
                 ]
             )
@@ -168,7 +168,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         await viewModel.handleGlobalShortcutRelease(configURL: URL(fileURLWithPath: "/tmp/config.json"))
 
         let invocation = await probe.invocation()
-        XCTAssertEqual(invocation?.mode, .vi)
+        XCTAssertEqual(invocation?.mode, .en)
     }
 
     @MainActor
@@ -202,7 +202,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         viewModel.applySpeechEngineSettings(
             SpeechEngineSettings(
                 selectedEngineID: "funasr-nano",
-                selectedMode: .vi,
+                selectedMode: .en,
                 engines: [
                     "funasr-nano": EngineInstallConfig(
                         engineKind: .funasr,
@@ -210,7 +210,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
                         binaryPath: "/tmp/llama-funasr-cli",
                         modelPath: "/tmp/model.gguf",
                         defaultMode: .auto,
-                        supportedModes: [.auto, .en, .vi]
+                        supportedModes: [.auto, .en]
                     ),
                 ]
             )
@@ -235,7 +235,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         let invocation = await transcriptionProbe.invocation()
         XCTAssertEqual(invocation?.configURL, URL(fileURLWithPath: "/tmp/config.json"))
         XCTAssertEqual(invocation?.audioURL, URL(fileURLWithPath: "/tmp/captured.wav"))
-        XCTAssertEqual(invocation?.mode, .vi)
+        XCTAssertEqual(invocation?.mode, .en)
         let didStop = await recordingProbe.didStop()
         XCTAssertTrue(didStop)
         XCTAssertFalse(viewModel.isRecording)

@@ -261,7 +261,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
         viewModel.applySpeechEngineSettings(
             SpeechEngineSettings(
                 selectedEngineID: "funasr-nano",
-                selectedMode: .vi,
+                selectedMode: .en,
                 engines: [
                     "funasr-nano": EngineInstallConfig(
                         engineKind: .funasr,
@@ -269,7 +269,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
                         binaryPath: "/tmp/llama-funasr-cli",
                         modelPath: "/tmp/model.gguf",
                         defaultMode: .auto,
-                        supportedModes: [.auto, .en, .vi]
+                        supportedModes: [.auto, .en]
                     ),
                 ]
             )
@@ -283,7 +283,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
         let invocation = await probe.invocation()
         XCTAssertEqual(invocation?.configURL, URL(fileURLWithPath: "/tmp/config.json"))
         XCTAssertEqual(invocation?.audioURL, capturedURL)
-        XCTAssertEqual(invocation?.mode, .vi)
+        XCTAssertEqual(invocation?.mode, .en)
         XCTAssertFalse(viewModel.isRecording)
         XCTAssertEqual(viewModel.recordingStatusText, "Last recording ready")
         XCTAssertEqual(viewModel.transcript, "captured speech")
@@ -317,7 +317,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
                         binaryPath: "/tmp/nano",
                         modelPath: "/tmp/nano.gguf",
                         defaultMode: .auto,
-                        supportedModes: [.auto, .en, .vi]
+                        supportedModes: [.auto, .en]
                     ),
                 ]
             )
@@ -356,7 +356,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
                         binaryPath: "/tmp/nano",
                         modelPath: "/tmp/nano.gguf",
                         defaultMode: .auto,
-                        supportedModes: [.auto, .en, .vi]
+                        supportedModes: [.auto, .en]
                     ),
                 ]
             )
@@ -366,7 +366,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
 
         viewModel.selectEngine(id: "funasr-nano")
 
-        XCTAssertEqual(viewModel.availableLanguageModes, [.auto, .en, .vi])
+        XCTAssertEqual(viewModel.availableLanguageModes, [.auto, .en])
     }
 
     @MainActor
@@ -399,23 +399,23 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
                         binaryPath: "/tmp/nano",
                         modelPath: "/tmp/nano.gguf",
                         defaultMode: .auto,
-                        supportedModes: [.auto, .en, .vi]
+                        supportedModes: [.auto, .en]
                     ),
                 ]
             )
         )
 
         viewModel.selectEngine(id: "funasr-nano")
-        viewModel.selectMode(.vi)
+        viewModel.selectMode(.en)
 
         let saved = persistenceProbe.values()
         XCTAssertEqual(saved.count, 2)
         XCTAssertEqual(saved[0].selectedEngineID, "funasr-nano")
         XCTAssertEqual(saved[0].selectedMode, .auto)
         XCTAssertEqual(saved[1].selectedEngineID, "funasr-nano")
-        XCTAssertEqual(saved[1].selectedMode, .vi)
+        XCTAssertEqual(saved[1].selectedMode, .en)
         XCTAssertEqual(saved[1].engines["funasr-sensevoice"]?.supportedModes, [.auto])
-        XCTAssertEqual(saved[1].engines["funasr-nano"]?.supportedModes, [.auto, .en, .vi])
+        XCTAssertEqual(saved[1].engines["funasr-nano"]?.supportedModes, [.auto, .en])
     }
 
     @MainActor

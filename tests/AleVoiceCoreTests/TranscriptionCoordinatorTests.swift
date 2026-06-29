@@ -41,7 +41,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
     func test_transcribeUsesSelectedModeWhenOverrideIsNil() throws {
         let settings = SpeechEngineSettings(
             selectedEngineID: "funasr-nano",
-            selectedMode: .vi,
+            selectedMode: .en,
             engines: [
                 "funasr-nano": EngineInstallConfig(
                     engineKind: .funasr,
@@ -49,7 +49,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
                     binaryPath: "/tmp/llama-funasr-cli",
                     modelPath: "/tmp/qwen3-0.6b-q4km.gguf",
                     defaultMode: .auto,
-                    supportedModes: [.auto, .en, .vi],
+                    supportedModes: [.auto, .en],
                     auxiliaryModelPaths: ["encoder": "/tmp/funasr-encoder-f16.gguf"]
                 ),
             ]
@@ -69,7 +69,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
             overrideMode: nil
         )
 
-        XCTAssertEqual(engine.lastRequest?.mode, .vi)
+        XCTAssertEqual(engine.lastRequest?.mode, .en)
     }
 
     func test_transcribeUsesOverrideModeWhenProvided() throws {
@@ -266,7 +266,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         let configURL = root.appendingPathComponent("speech-engine.json")
         let settings = SpeechEngineSettings(
             selectedEngineID: "funasr-nano",
-            selectedMode: .vi,
+            selectedMode: .en,
             engines: [
                 "funasr-nano": EngineInstallConfig(
                     engineKind: .funasr,
@@ -274,7 +274,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
                     binaryPath: binaryURL.path,
                     modelPath: modelURL.path,
                     defaultMode: .auto,
-                    supportedModes: [.auto, .en, .vi],
+                    supportedModes: [.auto, .en],
                     auxiliaryModelPaths: ["encoder": encoderURL.path]
                 ),
             ]
@@ -284,12 +284,12 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         let result = try AleVoiceDoctor(
             sampleAudioResolver: { sampleURL },
             transcribe: { _, _, mode in
-                XCTAssertEqual(mode, .vi)
+                XCTAssertEqual(mode, .en)
                 return .init(engine: .funasr, modelIdentifier: "model", transcript: "ok", latencyMs: 1)
             }
         ).run(configURL: configURL)
 
-        XCTAssertTrue(result.checks.contains(.init(name: "selected-mode", status: .passed, detail: "vi")))
+        XCTAssertTrue(result.checks.contains(.init(name: "selected-mode", status: .passed, detail: "en")))
         XCTAssertTrue(result.checks.contains(.init(name: "auxiliary-model:encoder", status: .passed, detail: encoderURL.path)))
     }
 

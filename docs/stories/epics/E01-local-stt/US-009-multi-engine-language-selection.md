@@ -31,6 +31,7 @@ hotkey dictation through that selected model/mode.
 - Manual recording and global hotkey release use the selected language mode
   instead of hardcoded Auto.
 - CLI help documents multi-engine setup and `auto|en|vi` mode vocabulary.
+  Installed engine metadata still decides which of those modes appears.
 - Explicit language modes remain capability-gated by installed engine metadata.
 
 ## Design Notes
@@ -38,9 +39,8 @@ hotkey dictation through that selected model/mode.
 - Commands: `AleVoiceCLI setup funasr-sensevoice`, `AleVoiceCLI setup funasr-nano`,
   `AleVoiceCLI transcribe --mode auto|en|vi`.
 - Domain rules: selected mode must be listed in the selected engine's
-  `supportedModes`; SenseVoice remains Auto-only by config; Nano declares
-  `auto`, `en`, and `vi` but runtime language forcing still depends on pinned
-  binary support.
+  `supportedModes`; SenseVoice remains Auto-only by config; pinned Nano
+  declares `auto` and `en`. Vietnamese requires a future MLT-capable runtime.
 - UI surfaces: settings/debug window model picker and language picker.
 
 ## Validation

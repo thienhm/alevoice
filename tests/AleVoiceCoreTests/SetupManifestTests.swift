@@ -29,7 +29,7 @@ final class SetupManifestTests: XCTestCase {
         XCTAssertEqual(manifest.engineKind, "funasr")
         XCTAssertEqual(manifest.defaultVariant, "q4km")
         XCTAssertEqual(variant.configTemplate.defaultMode, .auto)
-        XCTAssertEqual(variant.configTemplate.supportedModes, [.auto, .en, .vi])
+        XCTAssertEqual(variant.configTemplate.supportedModes, [.auto, .en])
         XCTAssertEqual(variant.runtime.binaryRelativePath, "llama-funasr-cli")
         XCTAssertEqual(variant.models.map(\.relativePath), ["qwen3-0.6b-q4km.gguf"])
         XCTAssertEqual(variant.auxiliaryModels["encoder"]?.relativePath, "funasr-encoder-f16.gguf")

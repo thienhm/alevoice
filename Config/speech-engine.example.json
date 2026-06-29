@@ -1,6 +1,6 @@
 {
   "selectedEngine": "funasr-nano",
-  "selectedMode": "vi",
+  "selectedMode": "en",
   "engines": {
     "funasr-sensevoice": {
       "engineKind": "funasr",
@@ -19,7 +19,7 @@
         "encoder": "/Users/me/Library/Application Support/AleVoice/engines/funasr-nano/current/models/funasr-encoder-f16.gguf"
       },
       "defaultMode": "auto",
-      "supportedModes": ["auto", "en", "vi"]
+      "supportedModes": ["auto", "en"]
     }
   }
 }
