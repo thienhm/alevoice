@@ -23,5 +23,8 @@ tmp/stt-benchmarks/
 # macOS metadata.
 .DS_Store
 
+# Python test cache.
+__pycache__/
+
 # Local native speech-engine config override.
 Config/speech-engine.json
