@@ -3,6 +3,124 @@ import XCTest
 import AleVoiceCore
 
 final class TranscriptionDebugViewModelTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.removeObject(forKey: TranscriptionDebugViewModel.dictationEnabledDefaultsKey)
+    }
+
+    @MainActor
+    func test_dictationEnabledDefaultsToTrueWhenPreferenceIsMissing() {
+        let defaults = UserDefaults(suiteName: "TranscriptionDebugViewModelTests.default.\(UUID().uuidString)")!
+        defaults.removeObject(forKey: TranscriptionDebugViewModel.dictationEnabledDefaultsKey)
+
+        let viewModel = TranscriptionDebugViewModel(
+            defaults: defaults,
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+
+        XCTAssertTrue(viewModel.isDictationEnabled)
+        XCTAssertTrue(viewModel.canToggleDictationEnabled)
+    }
+
+    @MainActor
+    func test_setDictationEnabledPersistsPreference() {
+        let suiteName = "TranscriptionDebugViewModelTests.persist.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removeObject(forKey: TranscriptionDebugViewModel.dictationEnabledDefaultsKey)
+        let viewModel = TranscriptionDebugViewModel(
+            defaults: defaults,
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+
+        viewModel.setDictationEnabled(false)
+
+        let reloadedViewModel = TranscriptionDebugViewModel(
+            defaults: UserDefaults(suiteName: suiteName)!,
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+        XCTAssertFalse(viewModel.isDictationEnabled)
+        XCTAssertFalse(reloadedViewModel.isDictationEnabled)
+    }
+
+    @MainActor
+    func test_dictationEnabledToggleIsUnavailableWhileBusy() async {
+        let gate = AsyncGate()
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {
+                await gate.wait()
+            },
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+
+        let task = Task {
+            await viewModel.startRecording()
+        }
+        await Task.yield()
+        XCTAssertFalse(viewModel.canToggleDictationEnabled)
+
+        await gate.release()
+        await task.value
+        XCTAssertFalse(viewModel.canToggleDictationEnabled)
+    }
+
+    @MainActor
+    func test_startRecordingDoesNothingWhenDictationIsDisabled() async {
+        let probe = RecordingProbe()
+        let defaults = UserDefaults(suiteName: "TranscriptionDebugViewModelTests.disabledStart.\(UUID().uuidString)")!
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {
+                await probe.markStart()
+            },
+            defaults: defaults,
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+        viewModel.setDictationEnabled(false)
+
+        await viewModel.startRecording()
+
+        let didStart = await probe.didStart()
+        XCTAssertFalse(didStart)
+        XCTAssertFalse(viewModel.isRecording)
+        XCTAssertFalse(viewModel.isRunning)
+        XCTAssertEqual(viewModel.recordingStatusText, "Recorder idle")
+    }
+
+    @MainActor
+    func test_runSampleStillWorksWhenDictationIsDisabled() async throws {
+        let result = SpeechTranscriptionResult(
+            engine: .funasr,
+            modelIdentifier: "sensevoice-small",
+            transcript: "sample still works",
+            latencyMs: 42
+        )
+        let defaults = UserDefaults(suiteName: "TranscriptionDebugViewModelTests.disabledSample.\(UUID().uuidString)")!
+        let viewModel = TranscriptionDebugViewModel(
+            defaults: defaults,
+            transcribe: { _, _, _ async throws in result }
+        )
+        viewModel.setDictationEnabled(false)
+
+        await viewModel.runSample(
+            configURL: URL(fileURLWithPath: "/tmp/config.json"),
+            audioURL: URL(fileURLWithPath: "/tmp/sample.wav"),
+            mode: .auto
+        )
+
+        XCTAssertEqual(viewModel.transcript, "sample still works")
+        XCTAssertEqual(viewModel.latencyText, "42 ms")
+        XCTAssertNil(viewModel.errorText)
+    }
+
     @MainActor
     func test_refreshPermissionStatusShowsAuthorizedState() async throws {
         let viewModel = TranscriptionDebugViewModel(

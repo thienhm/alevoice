@@ -45,9 +45,9 @@ Desktop/UI contracts change:
 
 - menu bar item shows current app state
 - menu bar waveform icon turns red only while recording
-- menu menu shows permissions, shortcut, open settings, and quit actions
+- menu menu shows enabled state, shortcut, open settings, and quit actions
 - menu exposes a copy action for the last error when an error exists
-- settings/debug window remains available as a secondary surface
+- settings/debug window remains available as the permission/status surface
 - settings/debug window keeps error text selectable
 
 ## Data Model

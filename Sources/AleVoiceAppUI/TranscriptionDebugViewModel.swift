@@ -4,12 +4,15 @@ import Foundation
 
 @MainActor
 public final class TranscriptionDebugViewModel: ObservableObject {
+    nonisolated public static let dictationEnabledDefaultsKey = "dictationEnabled"
+
     @Published public private(set) var sessionState: DictationSessionState = .idle
     @Published public private(set) var transcript: String = ""
     @Published public private(set) var latencyText: String = ""
     @Published public private(set) var errorText: String?
     @Published public private(set) var isRunning: Bool = false
     @Published public private(set) var isRecording: Bool = false
+    @Published public private(set) var isDictationEnabled: Bool
     @Published public private(set) var recordingStatusText: String = "Recorder idle"
     @Published public private(set) var permissionStatusText: String = "Microphone permission: unknown"
     @Published public private(set) var accessibilityStatusText: String = "Accessibility: unknown"
@@ -36,6 +39,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     private let transcriptFormatter: TranscriptFormatter
     private let transcribeClosure: @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult
     private let deliverTranscriptClosure: @Sendable (String) async throws -> Void
+    private let defaults: UserDefaults
     private var requestToken = 0
     private var pendingGlobalShortcutReleaseConfigURL: URL?
     private var isGlobalShortcutActivationStarting = false
@@ -62,6 +66,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             throw AudioRecorderError.notRecording
         },
         transcriptFormatter: TranscriptFormatter = TranscriptFormatter(),
+        defaults: UserDefaults = .standard,
         transcribe: @escaping @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult,
         deliverTranscript: @escaping @Sendable (String) async throws -> Void = { _ in }
     ) {
@@ -80,8 +85,23 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         self.startRecordingClosure = startRecording
         self.stopRecordingClosure = stopRecording
         self.transcriptFormatter = transcriptFormatter
+        self.defaults = defaults
+        if defaults.object(forKey: Self.dictationEnabledDefaultsKey) == nil {
+            self.isDictationEnabled = true
+        } else {
+            self.isDictationEnabled = defaults.bool(forKey: Self.dictationEnabledDefaultsKey)
+        }
         self.transcribeClosure = transcribe
         self.deliverTranscriptClosure = deliverTranscript
+    }
+
+    public var canToggleDictationEnabled: Bool {
+        !isCapturingShortcut && !isRunning && !isRecording
+    }
+
+    public func setDictationEnabled(_ isEnabled: Bool) {
+        isDictationEnabled = isEnabled
+        defaults.set(isEnabled, forKey: Self.dictationEnabledDefaultsKey)
     }
 
     public func refreshPermissionStatus() async {
@@ -153,7 +173,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func handleGlobalShortcutActivation() async {
-        guard !isCapturingShortcut, !isRecording, !isRunning else {
+        guard isDictationEnabled, !isCapturingShortcut, !isRecording, !isRunning else {
             return
         }
 
@@ -179,7 +199,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func startRecording() async {
-        guard !isCapturingShortcut else {
+        guard isDictationEnabled, !isCapturingShortcut else {
             return
         }
 

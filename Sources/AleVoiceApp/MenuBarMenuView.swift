@@ -9,15 +9,19 @@ struct MenuBarMenuView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(statusText)
+            let lines = menuStatusLines(
+                statusText: statusText,
+                isDictationEnabled: viewModel.isDictationEnabled,
+                shortcutText: viewModel.shortcutDisplayText
+            )
+            Text(lines[0])
                 .font(.system(size: 12, weight: .semibold))
-            Text(viewModel.permissionStatusText)
-                .font(.system(size: 11))
-            Text(viewModel.accessibilityStatusText)
-                .font(.system(size: 11))
-            Text(viewModel.inputMonitoringStatusText)
-                .font(.system(size: 11))
-            Text(viewModel.shortcutDisplayText)
+            Toggle("Enabled", isOn: Binding(
+                get: { viewModel.isDictationEnabled },
+                set: { viewModel.setDictationEnabled($0) }
+            ))
+            .disabled(!viewModel.canToggleDictationEnabled)
+            Text(lines[2])
                 .font(.system(size: 11))
         }
         .padding(.bottom, 6)
@@ -63,4 +67,17 @@ func lastErrorMessage(from state: DictationSessionState) -> String? {
         return nil
     }
     return message
+}
+
+@MainActor
+func menuStatusLines(
+    statusText: String,
+    isDictationEnabled: Bool,
+    shortcutText: String
+) -> [String] {
+    [
+        statusText,
+        isDictationEnabled ? "Enabled" : "Disabled",
+        shortcutText
+    ]
 }

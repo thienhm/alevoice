@@ -61,6 +61,22 @@ rtk ./scripts/bin/harness-cli story verify US-007
   passed with 95 tests and 0 failures after replacing floating overlay
   feedback with a red waveform icon during recording and adding copyable
   last-error affordances.
+- Enable-toggle follow-up:
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer /opt/homebrew/bin/rtk swift test --filter TranscriptionDebugViewModelTests`
+  passed with 22 tests and 0 failures, `... swift test --filter
+  GlobalHotkeyDebugViewModelTests` passed with 13 tests and 0 failures, and
+  `... swift test --filter MenuBarMenuViewTests` passed with 4 tests and 0
+  failures after adding a persistent dictation enable toggle, blocking disabled
+  dictation starts, keeping sample transcription usable while disabled, and
+  removing permission status rows from the menu bar menu.
+- Enable-toggle final proof:
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer /opt/homebrew/bin/rtk swift test`
+  passed with 115 tests and 0 failures,
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer /opt/homebrew/bin/rtk ./scripts/run-alevoice-app --print-bundle-path`
+  built, ad-hoc signed, and printed `.build/debug/AleVoiceApp.app`, and
+  `/opt/homebrew/bin/rtk /Users/alex/workspace/Projects/alevoice/scripts/bin/harness-cli story verify US-007`
+  passed. The Codex worktree did not include `scripts/bin/harness-cli`, so the
+  source checkout's prebuilt Harness binary was used against this worktree.
 
 2026-06-27 platform proof:
 
@@ -93,6 +109,9 @@ rtk ./scripts/bin/harness-cli story verify US-007
 - Input Monitoring request/re-check no longer shows a hard denial when Quartz
   returns no confirmed authorization; the app reports `unknown` and preserves
   the request-attempt marker for follow-up refresh.
+- Expected current menu shape follow-up: Idle/Recording state text, `Enabled`
+  toggle, shortcut row, optional `Copy Last Error`, `Open Settings`, and `Quit
+  AleVoice`; permission status rows should no longer appear in the menu.
 
 Remaining platform gate:
 

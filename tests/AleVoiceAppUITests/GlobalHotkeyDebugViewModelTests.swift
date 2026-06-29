@@ -3,6 +3,32 @@ import XCTest
 import AleVoiceCore
 
 final class GlobalHotkeyDebugViewModelTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.removeObject(forKey: TranscriptionDebugViewModel.dictationEnabledDefaultsKey)
+    }
+
+    @MainActor
+    func test_hotkeyActivationDoesNothingWhenDictationIsDisabled() async {
+        let recordingProbe = RecordingProbe()
+        let defaults = UserDefaults(suiteName: "GlobalHotkeyDebugViewModelTests.disabledHotkey.\(UUID().uuidString)")!
+        let viewModel = TranscriptionDebugViewModel(
+            startRecording: {
+                await recordingProbe.markStart()
+            },
+            defaults: defaults,
+            transcribe: { _, _, _ in fatalError() }
+        )
+        viewModel.setDictationEnabled(false)
+
+        await viewModel.handleGlobalShortcutActivation()
+
+        let didStart = await recordingProbe.didStart()
+        XCTAssertFalse(didStart)
+        XCTAssertFalse(viewModel.isRecording)
+        XCTAssertFalse(viewModel.isRunning)
+    }
+
     @MainActor
     func test_refreshInputMonitoringStatusShowsAuthorizedState() async {
         let viewModel = TranscriptionDebugViewModel(
@@ -310,6 +336,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
 
         await Task.yield()
         XCTAssertTrue(viewModel.isCapturingShortcut)
+        XCTAssertFalse(viewModel.canToggleDictationEnabled)
 
         await viewModel.startRecording()
         await viewModel.stopRecordingAndTranscribe(

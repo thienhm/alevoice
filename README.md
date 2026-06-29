@@ -187,7 +187,7 @@ Check Harness story proof when the Harness CLI is installed locally:
 The automated MVP floor is the full Swift test suite. Platform validation adds:
 
 - app launches as a background/accessory menu bar utility
-- menu bar menu exposes state, permissions, shortcut, settings, and quit
+- menu bar menu exposes state, enabled toggle, shortcut, settings, and quit
 - settings window opens from the menu bar
 - global shortcut starts/stops recording after Input Monitoring approval
 - menu bar waveform icon turns red while recording

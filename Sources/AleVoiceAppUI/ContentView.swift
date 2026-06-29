@@ -19,6 +19,12 @@ public struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Dictation mode: Auto")
 
+            Toggle("Enabled", isOn: Binding(
+                get: { viewModel.isDictationEnabled },
+                set: { viewModel.setDictationEnabled($0) }
+            ))
+            .disabled(!viewModel.canToggleDictationEnabled)
+
             HStack(spacing: 12) {
                 Text(viewModel.permissionStatusText)
                 Button("Refresh permission status") {
@@ -91,14 +97,14 @@ public struct ContentView: View {
                         await viewModel.startRecording()
                     }
                 }
-                .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || viewModel.isRecording)
+                .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || viewModel.isRecording || !viewModel.isDictationEnabled)
 
                 Button("Stop and transcribe recording") {
                     Task {
                         await viewModel.stopRecordingAndTranscribe(configURL: configURL)
                     }
                 }
-                .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || !viewModel.isRecording)
+                .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || !viewModel.isRecording || !viewModel.isDictationEnabled)
             }
 
             Button("Transcribe en-001 sample") {
