@@ -156,7 +156,8 @@ struct SetupInstaller {
             modelPath: layout.modelURL.path,
             defaultMode: variant.configTemplate.defaultMode,
             supportedModes: variant.configTemplate.supportedModes,
-            auxiliaryModelPaths: auxiliaryModelPaths
+            auxiliaryModelPaths: auxiliaryModelPaths,
+            runtimeProfile: variant.configTemplate.runtimeProfile
         )
         let selectedEngineID = Self.selectedEngineID(
             existing: existingSettings,

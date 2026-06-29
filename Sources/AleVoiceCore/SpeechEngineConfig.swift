@@ -1,5 +1,10 @@
 import Foundation
 
+public enum FunASRRuntimeProfile: String, Codable, Equatable, Sendable {
+    case llamaCPP = "llamaCpp"
+    case crispASRFunASR = "crispasrFunASR"
+}
+
 public struct EnginePathConfig: Codable, Equatable, Sendable {
     public let displayName: String
     public let binaryPath: String
@@ -7,6 +12,7 @@ public struct EnginePathConfig: Codable, Equatable, Sendable {
     public let defaultMode: SpeechLanguageMode
     public let supportedModes: [SpeechLanguageMode]
     public let auxiliaryModelPaths: [String: String]
+    public let runtimeProfile: FunASRRuntimeProfile
 
     public init(
         displayName: String = "FunASR",
@@ -14,7 +20,8 @@ public struct EnginePathConfig: Codable, Equatable, Sendable {
         modelPath: String,
         defaultMode: SpeechLanguageMode,
         supportedModes: [SpeechLanguageMode] = [.auto],
-        auxiliaryModelPaths: [String: String] = [:]
+        auxiliaryModelPaths: [String: String] = [:],
+        runtimeProfile: FunASRRuntimeProfile = .llamaCPP
     ) {
         self.displayName = displayName
         self.binaryPath = binaryPath
@@ -22,6 +29,7 @@ public struct EnginePathConfig: Codable, Equatable, Sendable {
         self.defaultMode = defaultMode
         self.supportedModes = supportedModes
         self.auxiliaryModelPaths = auxiliaryModelPaths
+        self.runtimeProfile = runtimeProfile
     }
 
     public init(from decoder: Decoder) throws {
@@ -32,7 +40,8 @@ public struct EnginePathConfig: Codable, Equatable, Sendable {
             modelPath: try container.decode(String.self, forKey: .modelPath),
             defaultMode: try container.decode(SpeechLanguageMode.self, forKey: .defaultMode),
             supportedModes: try container.decodeIfPresent([SpeechLanguageMode].self, forKey: .supportedModes) ?? [.auto],
-            auxiliaryModelPaths: try container.decodeIfPresent([String: String].self, forKey: .auxiliaryModelPaths) ?? [:]
+            auxiliaryModelPaths: try container.decodeIfPresent([String: String].self, forKey: .auxiliaryModelPaths) ?? [:],
+            runtimeProfile: try container.decodeIfPresent(FunASRRuntimeProfile.self, forKey: .runtimeProfile) ?? .llamaCPP
         )
     }
 
@@ -43,6 +52,7 @@ public struct EnginePathConfig: Codable, Equatable, Sendable {
         case defaultMode
         case supportedModes
         case auxiliaryModelPaths
+        case runtimeProfile
     }
 }
 
@@ -54,6 +64,7 @@ public struct EngineInstallConfig: Codable, Equatable, Sendable {
     public let defaultMode: SpeechLanguageMode
     public let supportedModes: [SpeechLanguageMode]
     public let auxiliaryModelPaths: [String: String]
+    public let runtimeProfile: FunASRRuntimeProfile
 
     public init(
         engineKind: SpeechEngineKind,
@@ -62,7 +73,8 @@ public struct EngineInstallConfig: Codable, Equatable, Sendable {
         modelPath: String,
         defaultMode: SpeechLanguageMode,
         supportedModes: [SpeechLanguageMode] = [.auto],
-        auxiliaryModelPaths: [String: String] = [:]
+        auxiliaryModelPaths: [String: String] = [:],
+        runtimeProfile: FunASRRuntimeProfile = .llamaCPP
     ) {
         self.engineKind = engineKind
         self.displayName = displayName
@@ -71,6 +83,7 @@ public struct EngineInstallConfig: Codable, Equatable, Sendable {
         self.defaultMode = defaultMode
         self.supportedModes = supportedModes
         self.auxiliaryModelPaths = auxiliaryModelPaths
+        self.runtimeProfile = runtimeProfile
     }
 
     public init(from decoder: Decoder) throws {
@@ -82,7 +95,8 @@ public struct EngineInstallConfig: Codable, Equatable, Sendable {
             modelPath: try container.decode(String.self, forKey: .modelPath),
             defaultMode: try container.decode(SpeechLanguageMode.self, forKey: .defaultMode),
             supportedModes: try container.decodeIfPresent([SpeechLanguageMode].self, forKey: .supportedModes) ?? [.auto],
-            auxiliaryModelPaths: try container.decodeIfPresent([String: String].self, forKey: .auxiliaryModelPaths) ?? [:]
+            auxiliaryModelPaths: try container.decodeIfPresent([String: String].self, forKey: .auxiliaryModelPaths) ?? [:],
+            runtimeProfile: try container.decodeIfPresent(FunASRRuntimeProfile.self, forKey: .runtimeProfile) ?? .llamaCPP
         )
     }
 
@@ -93,7 +107,8 @@ public struct EngineInstallConfig: Codable, Equatable, Sendable {
             modelPath: modelPath,
             defaultMode: defaultMode,
             supportedModes: supportedModes,
-            auxiliaryModelPaths: auxiliaryModelPaths
+            auxiliaryModelPaths: auxiliaryModelPaths,
+            runtimeProfile: runtimeProfile
         )
     }
 
@@ -105,6 +120,7 @@ public struct EngineInstallConfig: Codable, Equatable, Sendable {
         case defaultMode
         case supportedModes
         case auxiliaryModelPaths
+        case runtimeProfile
     }
 }
 
@@ -154,7 +170,8 @@ public struct SpeechEngineSettings: Codable, Equatable, Sendable {
                 modelPath: funasr.modelPath,
                 defaultMode: funasr.defaultMode,
                 supportedModes: funasr.supportedModes,
-                auxiliaryModelPaths: funasr.auxiliaryModelPaths
+                auxiliaryModelPaths: funasr.auxiliaryModelPaths,
+                runtimeProfile: funasr.runtimeProfile
             ),
         ]
     }

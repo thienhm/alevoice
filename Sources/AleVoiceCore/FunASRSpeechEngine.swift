@@ -11,6 +11,15 @@ public final class FunASRSpeechEngine: SpeechEngine {
 
     public func buildCommand(for request: SpeechTranscriptionRequest) throws -> [String] {
         try ensureModeSupported(request.mode)
+        switch config.runtimeProfile {
+        case .llamaCPP:
+            return llamaCPPCommand(for: request)
+        case .crispASRFunASR:
+            return crispASRCommand(for: request)
+        }
+    }
+
+    private func llamaCPPCommand(for request: SpeechTranscriptionRequest) -> [String] {
         if let encoderPath = config.auxiliaryModelPaths["encoder"] {
             return [
                 config.binaryPath,
@@ -28,6 +37,22 @@ public final class FunASRSpeechEngine: SpeechEngine {
             config.modelPath,
             "-a",
             request.audioURL.path,
+        ]
+    }
+
+    private func crispASRCommand(for request: SpeechTranscriptionRequest) -> [String] {
+        [
+            config.binaryPath,
+            "--backend",
+            "fun-asr-mlt-nano",
+            "-m",
+            config.modelPath,
+            "-f",
+            request.audioURL.path,
+            "-l",
+            request.mode.rawValue,
+            "-nt",
+            "-np",
         ]
     }
 

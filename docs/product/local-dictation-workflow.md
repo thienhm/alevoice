@@ -10,6 +10,8 @@ Define the current native macOS dictation workflow for the menu bar MVP.
   `swift run AleVoiceCLI setup funasr-sensevoice`.
 - Optional second install path:
   `swift run AleVoiceCLI setup funasr-nano`.
+- Optional Vietnamese-capable install path:
+  `swift run AleVoiceCLI setup funasr-mlt-nano`.
 - Setup writes repo-local config at `Config/speech-engine.json`.
 - Managed runtime/model artifacts live under
   `~/Library/Application Support/AleVoice/`.
@@ -71,6 +73,6 @@ Define the current native macOS dictation workflow for the menu bar MVP.
 ## Runtime Caveat
 
 - SenseVoice currently remains Auto-only in the pinned local config.
-- The pinned Fun-ASR-Nano GGUF setup declares `auto` and `en` only. Vietnamese
-  should stay hidden until AleVoice adds an MLT-capable runtime/model whose
-  installed metadata proves `vi` support.
+- The pinned Fun-ASR-Nano GGUF setup declares `auto` and `en` only.
+- The CrispASR-backed Fun-ASR-MLT-Nano setup declares `auto`, `en`, and `vi`
+  and pins q8_0 because local q4 smoke was not accurate enough for Vietnamese.

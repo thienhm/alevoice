@@ -1,0 +1,34 @@
+{
+  "id": "funasr-mlt-nano",
+  "displayName": "FunASR MLT Nano",
+  "description": "Pinned CrispASR runtime with the Fun-ASR-MLT-Nano q8_0 GGUF model for multilingual dictation.",
+  "engineKind": "funasr",
+  "defaultVariant": "q8",
+  "variants": {
+    "q8": {
+      "runtime": {
+        "platforms": {
+          "macos-arm64": {
+            "url": "https://github.com/CrispStrobe/CrispASR/releases/download/v0.8.5/crispasr-macos.tar.gz",
+            "sha256": "6b01588c4833b419d562229a3a3dcba597105ba97d9e1f09974bb43b85d5be82"
+          }
+        },
+        "unpack": "tar.gz",
+        "binaryRelativePath": "crispasr-macos/crispasr"
+      },
+      "models": [
+        {
+          "id": "funasr-mlt-nano-q8",
+          "url": "https://huggingface.co/cstr/funasr-mlt-nano-GGUF/resolve/main/funasr-mlt-nano-2512-q8_0.gguf",
+          "sha256": "29d9ccaea032650bc747a33947f65f940bcbcf019d9f11471e4e8e0d7bab1b04",
+          "relativePath": "funasr-mlt-nano-2512-q8_0.gguf"
+        }
+      ],
+      "configTemplate": {
+        "defaultMode": "auto",
+        "supportedModes": ["auto", "en", "vi"],
+        "runtimeProfile": "crispasrFunASR"
+      }
+    }
+  }
+}

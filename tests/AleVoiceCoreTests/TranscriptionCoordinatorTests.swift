@@ -114,6 +114,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertTrue(output.text.contains("usage: AleVoiceCLI"))
         XCTAssertTrue(output.text.contains("setup funasr-sensevoice"))
         XCTAssertTrue(output.text.contains("setup funasr-nano"))
+        XCTAssertTrue(output.text.contains("setup funasr-mlt-nano"))
         XCTAssertTrue(output.text.contains("--mode auto|en|vi"))
         XCTAssertTrue(output.text.contains("build"))
         XCTAssertTrue(output.text.contains("run"))

@@ -199,6 +199,64 @@ final class SetupInstallerTests: XCTestCase {
         XCTAssertEqual(result.binaryURL.lastPathComponent, "llama-funasr-cli")
     }
 
+    func test_setupInstallsMLTNanoAndPersistsRuntimeProfile() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let downloads = root.appendingPathComponent("fixtures", isDirectory: true)
+        try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
+
+        let runtimeSource = downloads.appendingPathComponent("crispasr-macos.tar.gz")
+        let modelSource = downloads.appendingPathComponent("funasr-mlt-nano-2512-q8_0.gguf")
+        try Data("runtime".utf8).write(to: runtimeSource)
+        try Data("model".utf8).write(to: modelSource)
+
+        let manifest = try SetupManifest.load(
+            from: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Config/engines/funasr-mlt-nano.json")
+        )
+        let configURL = root.appendingPathComponent("Config/speech-engine.json")
+
+        let installer = SetupInstaller(
+            downloader: FakeDownloader(fixtures: [
+                URL(string: "https://github.com/CrispStrobe/CrispASR/releases/download/v0.8.5/crispasr-macos.tar.gz")!: runtimeSource,
+                URL(string: "https://huggingface.co/cstr/funasr-mlt-nano-GGUF/resolve/main/funasr-mlt-nano-2512-q8_0.gguf")!: modelSource,
+            ]),
+            hasher: FakeHasher(digests: [
+                root.appendingPathComponent("AleVoice/downloads/funasr-mlt-nano-crispasr-macos.tar.gz").path: "6b01588c4833b419d562229a3a3dcba597105ba97d9e1f09974bb43b85d5be82",
+                root.appendingPathComponent("AleVoice/downloads/funasr-mlt-nano-funasr-mlt-nano-2512-q8_0.gguf").path: "29d9ccaea032650bc747a33947f65f940bcbcf019d9f11471e4e8e0d7bab1b04",
+            ]),
+            extractor: FakeExtractor { destination, _ in
+                let binaryURL = destination
+                    .appendingPathComponent("crispasr-macos", isDirectory: true)
+                    .appendingPathComponent("crispasr")
+                try FileManager.default.createDirectory(
+                    at: binaryURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try Data("bin".utf8).write(to: binaryURL)
+            },
+            doctor: { _ in SetupDoctorResult(checks: []) }
+        )
+
+        let result = try installer.install(
+            request: .init(
+                manifest: manifest,
+                installRoot: root.appendingPathComponent("AleVoice", isDirectory: true),
+                configURL: configURL,
+                platform: .macOSArm64,
+                variantName: nil,
+                forceDownload: false
+            )
+        )
+
+        let saved = try SpeechEngineSettings.load(from: configURL)
+        XCTAssertEqual(saved.selectedEngineID, "funasr-mlt-nano")
+        XCTAssertEqual(saved.selectedMode, .auto)
+        XCTAssertEqual(saved.selectedEngineConfig.runtimeProfile, .crispASRFunASR)
+        XCTAssertEqual(saved.selectedEngineConfig.supportedModes, [.auto, .en, .vi])
+        XCTAssertEqual(result.binaryURL.path, root.appendingPathComponent("AleVoice/engines/funasr-mlt-nano/current/runtime/crispasr-macos/crispasr").path)
+        XCTAssertTrue(FileManager.default.isExecutableFile(atPath: result.binaryURL.path))
+    }
+
     func test_setupFailsOnChecksumMismatchBeforeInstall() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         let downloads = root.appendingPathComponent("fixtures", isDirectory: true)

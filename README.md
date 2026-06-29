@@ -52,6 +52,12 @@ Optionally add Nano side-by-side:
 swift run AleVoiceCLI setup funasr-nano
 ```
 
+For Vietnamese-capable MLT Nano, add the larger CrispASR-backed engine:
+
+```bash
+swift run AleVoiceCLI setup funasr-mlt-nano
+```
+
 Each setup command will:
 
 - download the pinned FunASR runtime and engine model artifacts
@@ -87,8 +93,8 @@ sample transcription path.
 - Runs locally on macOS 14 or newer.
 - Lives in the menu bar as a resident utility.
 - Lets the user choose an installed local model and a supported language mode.
-  The current pinned Nano GGUF setup exposes `auto` and `en`; Vietnamese needs a
-  future MLT-capable runtime/model.
+  The current pinned Nano GGUF setup exposes `auto` and `en`; the
+  CrispASR-backed MLT Nano setup exposes `auto`, `en`, and `vi`.
 - Records while the configured shortcut is held.
 - Transcribes after release through the configured local FunASR runtime.
 - Normalizes a small English/Vietnamese formatting command set.

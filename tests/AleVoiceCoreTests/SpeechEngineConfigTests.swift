@@ -65,6 +65,32 @@ final class SpeechEngineConfigTests: XCTestCase {
         XCTAssertEqual(settings.funasr.auxiliaryModelPaths["encoder"], "/tmp/managed/funasr-encoder-f16.gguf")
     }
 
+    func test_loadReadsRuntimeProfileForManagedEngine() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("speech-engine-runtime-profile.json")
+        try """
+        {
+          "selectedEngine": "funasr-mlt-nano",
+          "selectedMode": "vi",
+          "engines": {
+            "funasr-mlt-nano": {
+              "engineKind": "funasr",
+              "displayName": "FunASR MLT Nano",
+              "binaryPath": "/tmp/crispasr",
+              "modelPath": "/tmp/funasr-mlt.gguf",
+              "defaultMode": "auto",
+              "supportedModes": ["auto", "en", "vi"],
+              "runtimeProfile": "crispasrFunASR"
+            }
+          }
+        }
+        """.write(to: url, atomically: true, encoding: .utf8)
+
+        let settings = try SpeechEngineSettings.load(from: url)
+
+        XCTAssertEqual(settings.selectedEngineConfig.runtimeProfile, .crispASRFunASR)
+        XCTAssertEqual(settings.selectedPathConfig.runtimeProfile, .crispASRFunASR)
+    }
+
     func test_loadRejectsSelectedModeUnsupportedBySelectedEngine() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("speech-engine-unsupported-selected-mode.json")
         try """

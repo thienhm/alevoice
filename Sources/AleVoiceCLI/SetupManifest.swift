@@ -133,10 +133,16 @@ struct SetupModelArtifact: Codable, Equatable, Sendable {
 struct SetupConfigTemplate: Codable, Equatable, Sendable {
     let defaultMode: SpeechLanguageMode
     let supportedModes: [SpeechLanguageMode]
+    let runtimeProfile: FunASRRuntimeProfile
 
-    init(defaultMode: SpeechLanguageMode, supportedModes: [SpeechLanguageMode] = [.auto]) {
+    init(
+        defaultMode: SpeechLanguageMode,
+        supportedModes: [SpeechLanguageMode] = [.auto],
+        runtimeProfile: FunASRRuntimeProfile = .llamaCPP
+    ) {
         self.defaultMode = defaultMode
         self.supportedModes = supportedModes
+        self.runtimeProfile = runtimeProfile
     }
 
     init(from decoder: Decoder) throws {
@@ -144,13 +150,15 @@ struct SetupConfigTemplate: Codable, Equatable, Sendable {
         let defaultMode = try container.decode(SpeechLanguageMode.self, forKey: .defaultMode)
         self.init(
             defaultMode: defaultMode,
-            supportedModes: try container.decodeIfPresent([SpeechLanguageMode].self, forKey: .supportedModes) ?? [.auto]
+            supportedModes: try container.decodeIfPresent([SpeechLanguageMode].self, forKey: .supportedModes) ?? [.auto],
+            runtimeProfile: try container.decodeIfPresent(FunASRRuntimeProfile.self, forKey: .runtimeProfile) ?? .llamaCPP
         )
     }
 
     private enum CodingKeys: String, CodingKey {
         case defaultMode
         case supportedModes
+        case runtimeProfile
     }
 }
 

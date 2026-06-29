@@ -69,6 +69,39 @@ final class FunASRSpeechEngineTests: XCTestCase {
         )
     }
 
+    func test_buildCommandUsesCrispASRProfileForExplicitVietnamese() throws {
+        let config = EnginePathConfig(
+            displayName: "FunASR MLT Nano",
+            binaryPath: "/tmp/crispasr",
+            modelPath: "/tmp/funasr-mlt-nano-2512-q8_0.gguf",
+            defaultMode: .auto,
+            supportedModes: [.auto, .en, .vi],
+            runtimeProfile: .crispASRFunASR
+        )
+        let engine = FunASRSpeechEngine(config: config, runner: FakeRunner())
+        let request = SpeechTranscriptionRequest(
+            audioURL: URL(fileURLWithPath: "/tmp/vi-001.wav"),
+            mode: .vi
+        )
+
+        XCTAssertEqual(
+            try engine.buildCommand(for: request),
+            [
+                "/tmp/crispasr",
+                "--backend",
+                "fun-asr-mlt-nano",
+                "-m",
+                "/tmp/funasr-mlt-nano-2512-q8_0.gguf",
+                "-f",
+                "/tmp/vi-001.wav",
+                "-l",
+                "vi",
+                "-nt",
+                "-np",
+            ]
+        )
+    }
+
     func test_transcribeStripsTimestampWrapperAndReturnsLatency() throws {
         let runner = FakeRunner(
             stdout: "[00:00:00.000 --> 00:00:02.000]   hello from engine\n",

@@ -35,6 +35,26 @@ final class SetupManifestTests: XCTestCase {
         XCTAssertEqual(variant.auxiliaryModels["encoder"]?.relativePath, "funasr-encoder-f16.gguf")
     }
 
+    func test_loadsPinnedFunASRMLTNanoManifest() throws {
+        let manifest = try SetupManifest.load(
+            from: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Config/engines/funasr-mlt-nano.json")
+        )
+
+        let variant = try manifest.variant(named: nil)
+
+        XCTAssertEqual(manifest.id, "funasr-mlt-nano")
+        XCTAssertEqual(manifest.displayName, "FunASR MLT Nano")
+        XCTAssertEqual(manifest.engineKind, "funasr")
+        XCTAssertEqual(manifest.defaultVariant, "q8")
+        XCTAssertEqual(variant.configTemplate.defaultMode, .auto)
+        XCTAssertEqual(variant.configTemplate.supportedModes, [.auto, .en, .vi])
+        XCTAssertEqual(variant.configTemplate.runtimeProfile, .crispASRFunASR)
+        XCTAssertEqual(variant.runtime.binaryRelativePath, "crispasr-macos/crispasr")
+        XCTAssertEqual(variant.models.map(\.relativePath), ["funasr-mlt-nano-2512-q8_0.gguf"])
+        XCTAssertEqual(variant.models.first?.sha256, "29d9ccaea032650bc747a33947f65f940bcbcf019d9f11471e4e8e0d7bab1b04")
+    }
+
     func test_resolvesMacOSArm64RuntimeArtifact() throws {
         let manifest = try SetupManifest.load(
             from: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)

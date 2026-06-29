@@ -20,6 +20,15 @@
       },
       "defaultMode": "auto",
       "supportedModes": ["auto", "en"]
+    },
+    "funasr-mlt-nano": {
+      "engineKind": "funasr",
+      "displayName": "FunASR MLT Nano",
+      "binaryPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-mlt-nano/current/runtime/crispasr-macos/crispasr",
+      "modelPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-mlt-nano/current/models/funasr-mlt-nano-2512-q8_0.gguf",
+      "defaultMode": "auto",
+      "supportedModes": ["auto", "en", "vi"],
+      "runtimeProfile": "crispasrFunASR"
     }
   }
 }

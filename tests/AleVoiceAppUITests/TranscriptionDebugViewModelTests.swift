@@ -319,6 +319,15 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
                         defaultMode: .auto,
                         supportedModes: [.auto, .en]
                     ),
+                    "funasr-mlt-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR MLT Nano",
+                        binaryPath: "/tmp/crispasr",
+                        modelPath: "/tmp/mlt.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi],
+                        runtimeProfile: .crispASRFunASR
+                    ),
                 ]
             )
         )
@@ -358,6 +367,15 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
                         defaultMode: .auto,
                         supportedModes: [.auto, .en]
                     ),
+                    "funasr-mlt-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR MLT Nano",
+                        binaryPath: "/tmp/crispasr",
+                        modelPath: "/tmp/mlt.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi],
+                        runtimeProfile: .crispASRFunASR
+                    ),
                 ]
             )
         )
@@ -367,6 +385,10 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
         viewModel.selectEngine(id: "funasr-nano")
 
         XCTAssertEqual(viewModel.availableLanguageModes, [.auto, .en])
+
+        viewModel.selectEngine(id: "funasr-mlt-nano")
+
+        XCTAssertEqual(viewModel.availableLanguageModes, [.auto, .en, .vi])
     }
 
     @MainActor

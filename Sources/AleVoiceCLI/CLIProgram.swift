@@ -263,6 +263,7 @@ enum CLIUsage {
     commands:
       setup funasr-sensevoice [--config-path <path>] [--install-root <path>] [--force-download]
       setup funasr-nano [--config-path <path>] [--install-root <path>] [--force-download]
+      setup funasr-mlt-nano [--config-path <path>] [--install-root <path>] [--force-download]
       doctor [--config-path <path>]
       transcribe [--config <path>] --audio <path> [--mode auto|en|vi]
       build

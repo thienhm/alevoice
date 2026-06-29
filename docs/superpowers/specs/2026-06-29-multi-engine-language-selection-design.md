@@ -54,6 +54,7 @@ Add support for multiple managed local engines:
 
 1. `funasr-sensevoice`
 2. `funasr-nano`
+3. `funasr-mlt-nano`
 
 Intended capabilities:
 
@@ -64,21 +65,29 @@ Intended capabilities:
 - `funasr-nano`
   - candidate engine for Auto, English, Vietnamese
   - installed through the same managed setup flow
+  - current pinned `llama-funasr-cli` path is not good enough for Vietnamese
+- `funasr-mlt-nano`
+  - separate Vietnamese-capable path
+  - uses CrispASR macOS runtime instead of the pinned `llama-funasr-cli`
+  - pinned to a higher-quality MLT model quant that passes local smoke better
 
-Important validation gate:
+Validated runtime findings:
 
-Upstream Nano GGUF/runtime docs confirm the model and runtime path, but this
-design does not assume a forced-language CLI flag until the pinned
-`llama-funasr-cli` binary is inspected and smoke-tested locally.
+- The pinned `llama-funasr-cli` binary only exposes
+  `--enc <encoder> -m <model> -a <audio>` and no explicit language flag.
+- Local smoke on `vi-001.wav` confirms current `funasr-nano` should stay
+  `auto`/`en` only.
+- CrispASR's macOS binary exposes `-l <lang>` and `-l auto`.
+- Local smoke on `Fun-ASR-MLT-Nano-2512` showed:
+  - q4_k: Vietnamese still not acceptable
+  - q8_0: English exact on `en-001.wav`, Vietnamese close on `vi-001.wav`
 
 Therefore:
 
-- the design supports model switching immediately
-- forced `en` / `vi` exposure for Nano is conditional on local binary proof
-
-If the pinned Nano runtime does not support explicit language forcing, the app
-still ships useful multi-engine selection with Auto mode and leaves forced
-language selection disabled for that engine.
+- keep `funasr-nano` as the current light-weight path
+- do not expose `vi` on `funasr-nano`
+- add `funasr-mlt-nano` as a separate engine with its own runtime profile
+- pin `funasr-mlt-nano` to q8_0, not q4_k
 
 ## Setup CLI Design
 
@@ -140,6 +149,11 @@ For `funasr-nano`, setup installs:
 - one decoder model file
 - one auxiliary encoder model file
 
+For `funasr-mlt-nano`, setup installs:
+
+- one CrispASR macOS runtime archive
+- one `funasr-mlt-nano-2512-q8_0.gguf` model file
+
 ## Config Model
 
 `Config/speech-engine.json` becomes the single source of truth for:
@@ -174,6 +188,15 @@ Proposed shape:
       },
       "defaultMode": "auto",
       "supportedModes": ["auto", "en"]
+    },
+    "funasr-mlt-nano": {
+      "engineKind": "funasr",
+      "displayName": "FunASR MLT Nano",
+      "binaryPath": ".../crispasr",
+      "modelPath": ".../funasr-mlt-nano-2512-q8_0.gguf",
+      "defaultMode": "auto",
+      "supportedModes": ["auto", "en", "vi"],
+      "runtimeProfile": "crispasrFunASR"
     }
   }
 }
@@ -186,6 +209,7 @@ Proposed shape:
 - `displayName`
 - `supportedModes: [SpeechLanguageMode]`
 - `auxiliaryModelPaths: [String: String]?`
+- `runtimeProfile`
 
 `SpeechEngineSettings` should gain:
 
@@ -238,6 +262,24 @@ llama-funasr-cli --enc <encoder> -m <decoder> -a <audio>
 
 Forced language arguments must not be hardcoded until validated against the
 installed binary's real help surface and smoke behavior.
+
+### MLT Nano Path
+
+Command shape:
+
+```text
+crispasr --backend fun-asr-mlt-nano -m <model> -f <audio> -l <auto|en|vi> -nt -np
+```
+
+Implementation choice:
+
+- keep one top-level `FunASRSpeechEngine`
+- branch command building on `runtimeProfile`
+- keep the existing llama.cpp-style path for SenseVoice and Nano
+- add a CrispASR profile for `funasr-mlt-nano`
+
+This avoids inventing a second speech-engine abstraction when the only change
+is process invocation shape.
 
 Implementation should separate:
 
