@@ -25,7 +25,8 @@
         }
       ],
       "configTemplate": {
-        "defaultMode": "auto"
+        "defaultMode": "auto",
+        "supportedModes": ["auto"]
       }
     }
   }

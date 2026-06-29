@@ -1,0 +1,41 @@
+{
+  "id": "funasr-nano",
+  "displayName": "FunASR Nano",
+  "description": "Pinned FunASR llama.cpp runtime with the Fun-ASR-Nano q4_K_M decoder and f16 encoder GGUF models.",
+  "engineKind": "funasr",
+  "defaultVariant": "q4km",
+  "variants": {
+    "q4km": {
+      "runtime": {
+        "platforms": {
+          "macos-arm64": {
+            "url": "https://github.com/modelscope/FunASR/releases/download/runtime-llamacpp-v0.1.3/funasr-llamacpp-macos-arm64.tar.gz",
+            "sha256": "6bb457c9d841441823b253d7f631d7c7f04c55c26cc67fa98a0bd511f9e709ab"
+          }
+        },
+        "unpack": "tar.gz",
+        "binaryRelativePath": "llama-funasr-cli"
+      },
+      "models": [
+        {
+          "id": "decoder",
+          "url": "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-GGUF/resolve/main/qwen3-0.6b-q4km.gguf",
+          "sha256": "cc5057552aa9dddedcda73ea8889854e8a257eb07d0a561b7234465c1e856f22",
+          "relativePath": "qwen3-0.6b-q4km.gguf"
+        }
+      ],
+      "auxiliaryModels": {
+        "encoder": {
+          "id": "encoder",
+          "url": "https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-GGUF/resolve/main/funasr-encoder-f16.gguf",
+          "sha256": "f92f91d01a24fbed6c863495b2ee8c6a6788144a02858b75743f0946668de8a2",
+          "relativePath": "funasr-encoder-f16.gguf"
+        }
+      },
+      "configTemplate": {
+        "defaultMode": "auto",
+        "supportedModes": ["auto", "en", "vi"]
+      }
+    }
+  }
+}

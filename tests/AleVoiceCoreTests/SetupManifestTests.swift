@@ -12,7 +12,27 @@ final class SetupManifestTests: XCTestCase {
         XCTAssertEqual(manifest.displayName, "FunASR SenseVoice")
         XCTAssertEqual(manifest.engineKind, "funasr")
         XCTAssertEqual(manifest.defaultVariant, "f16")
+        XCTAssertEqual(try manifest.variant(named: nil).configTemplate.supportedModes, [.auto])
         XCTAssertEqual(try manifest.variant(named: nil).models.map(\.relativePath), ["sensevoice-small-f16.gguf"])
+    }
+
+    func test_loadsPinnedFunASRNanoManifest() throws {
+        let manifest = try SetupManifest.load(
+            from: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Config/engines/funasr-nano.json")
+        )
+
+        let variant = try manifest.variant(named: nil)
+
+        XCTAssertEqual(manifest.id, "funasr-nano")
+        XCTAssertEqual(manifest.displayName, "FunASR Nano")
+        XCTAssertEqual(manifest.engineKind, "funasr")
+        XCTAssertEqual(manifest.defaultVariant, "q4km")
+        XCTAssertEqual(variant.configTemplate.defaultMode, .auto)
+        XCTAssertEqual(variant.configTemplate.supportedModes, [.auto, .en, .vi])
+        XCTAssertEqual(variant.runtime.binaryRelativePath, "llama-funasr-cli")
+        XCTAssertEqual(variant.models.map(\.relativePath), ["qwen3-0.6b-q4km.gguf"])
+        XCTAssertEqual(variant.auxiliaryModels["encoder"]?.relativePath, "funasr-encoder-f16.gguf")
     }
 
     func test_resolvesMacOSArm64RuntimeArtifact() throws {

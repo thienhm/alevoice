@@ -132,11 +132,32 @@ struct SetupModelArtifact: Codable, Equatable, Sendable {
 
 struct SetupConfigTemplate: Codable, Equatable, Sendable {
     let defaultMode: SpeechLanguageMode
+    let supportedModes: [SpeechLanguageMode]
+
+    init(defaultMode: SpeechLanguageMode, supportedModes: [SpeechLanguageMode] = [.auto]) {
+        self.defaultMode = defaultMode
+        self.supportedModes = supportedModes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaultMode = try container.decode(SpeechLanguageMode.self, forKey: .defaultMode)
+        self.init(
+            defaultMode: defaultMode,
+            supportedModes: try container.decodeIfPresent([SpeechLanguageMode].self, forKey: .supportedModes) ?? [.auto]
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case defaultMode
+        case supportedModes
+    }
 }
 
 struct SetupVariantManifest: Codable, Equatable, Sendable {
     let runtime: SetupRuntimeArtifact
     let models: [SetupModelArtifact]
+    let auxiliaryModels: [String: SetupModelArtifact]
     let configTemplate: SetupConfigTemplate
 
     func runtimeArtifact(for platform: SetupPlatform) throws -> SetupResolvedRuntimeArtifact {
@@ -151,6 +172,27 @@ struct SetupVariantManifest: Codable, Equatable, Sendable {
         for model in models {
             try model.validate()
         }
+        for (_, model) in auxiliaryModels {
+            try model.validate()
+        }
+        guard configTemplate.supportedModes.contains(configTemplate.defaultMode) else {
+            throw SetupManifestError.invalidManifest("configTemplate supportedModes must include defaultMode")
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.runtime = try container.decode(SetupRuntimeArtifact.self, forKey: .runtime)
+        self.models = try container.decode([SetupModelArtifact].self, forKey: .models)
+        self.auxiliaryModels = try container.decodeIfPresent([String: SetupModelArtifact].self, forKey: .auxiliaryModels) ?? [:]
+        self.configTemplate = try container.decode(SetupConfigTemplate.self, forKey: .configTemplate)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case runtime
+        case models
+        case auxiliaryModels
+        case configTemplate
     }
 }
 

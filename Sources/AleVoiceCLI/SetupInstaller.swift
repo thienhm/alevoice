@@ -106,14 +106,27 @@ struct SetupInstaller {
         )
         try layout.createDirectories(with: fileManager)
 
-        let runtimeDownloadURL = layout.downloadsDirectory.appendingPathComponent(runtime.url.lastPathComponent)
-        let modelDownloadURL = layout.downloadsDirectory.appendingPathComponent(primaryModel.url.lastPathComponent)
+        let runtimeDownloadURL = layout.downloadURL(
+            engineID: request.manifest.id,
+            artifactName: runtime.url.lastPathComponent
+        )
+        let modelDownloadURL = layout.downloadURL(
+            engineID: request.manifest.id,
+            artifactName: primaryModel.url.lastPathComponent
+        )
 
-        try downloadIfNeeded(from: runtime.url, to: runtimeDownloadURL, force: request.forceDownload)
-        try verifyChecksum(fileURL: runtimeDownloadURL, expected: runtime.sha256)
+        try downloadAndVerify(from: runtime.url, to: runtimeDownloadURL, expected: runtime.sha256, force: request.forceDownload)
+        try downloadAndVerify(from: primaryModel.url, to: modelDownloadURL, expected: primaryModel.sha256, force: request.forceDownload)
 
-        try downloadIfNeeded(from: primaryModel.url, to: modelDownloadURL, force: request.forceDownload)
-        try verifyChecksum(fileURL: modelDownloadURL, expected: primaryModel.sha256)
+        var auxiliaryModelDownloads: [String: (model: SetupModelArtifact, downloadURL: URL)] = [:]
+        for (key, model) in variant.auxiliaryModels {
+            let downloadURL = layout.downloadURL(
+                engineID: request.manifest.id,
+                artifactName: model.url.lastPathComponent
+            )
+            try downloadAndVerify(from: model.url, to: downloadURL, expected: model.sha256, force: request.forceDownload)
+            auxiliaryModelDownloads[key] = (model, downloadURL)
+        }
 
         try resetDirectory(at: layout.runtimeDirectory)
         try extractor.extract(archiveAt: runtimeDownloadURL, kind: runtime.unpack, to: layout.runtimeDirectory)
@@ -124,16 +137,41 @@ struct SetupInstaller {
         }
         try fileManager.copyItem(at: modelDownloadURL, to: layout.modelURL)
 
+        var auxiliaryModelPaths: [String: String] = [:]
+        for (key, value) in auxiliaryModelDownloads {
+            let outputURL = layout.modelURL(relativePath: value.model.relativePath)
+            if fileManager.fileExists(atPath: outputURL.path) {
+                try fileManager.removeItem(at: outputURL)
+            }
+            try fileManager.copyItem(at: value.downloadURL, to: outputURL)
+            auxiliaryModelPaths[key] = outputURL.path
+        }
+
+        let existingSettings = try? SpeechEngineSettings.load(from: request.configURL)
+        var engines = existingSettings?.engines ?? [:]
+        engines[request.manifest.id] = EngineInstallConfig(
+            engineKind: .funasr,
+            displayName: request.manifest.displayName,
+            binaryPath: layout.binaryURL.path,
+            modelPath: layout.modelURL.path,
+            defaultMode: variant.configTemplate.defaultMode,
+            supportedModes: variant.configTemplate.supportedModes,
+            auxiliaryModelPaths: auxiliaryModelPaths
+        )
+        let selectedEngineID = Self.selectedEngineID(
+            existing: existingSettings,
+            installedEngineID: request.manifest.id,
+            engines: engines
+        )
+        let selectedMode = Self.selectedMode(
+            existing: existingSettings,
+            selectedEngineID: selectedEngineID,
+            engines: engines
+        )
         let settings = SpeechEngineSettings(
-            selectedEngineID: request.manifest.id,
-            engines: [
-                request.manifest.id: EngineInstallConfig(
-                    engineKind: .funasr,
-                    binaryPath: layout.binaryURL.path,
-                    modelPath: layout.modelURL.path,
-                    defaultMode: variant.configTemplate.defaultMode
-                ),
-            ]
+            selectedEngineID: selectedEngineID,
+            selectedMode: selectedMode,
+            engines: engines
         )
         try fileManager.createDirectory(
             at: request.configURL.deletingLastPathComponent(),
@@ -154,11 +192,47 @@ struct SetupInstaller {
         )
     }
 
+    private static func selectedEngineID(
+        existing: SpeechEngineSettings?,
+        installedEngineID: String,
+        engines: [String: EngineInstallConfig]
+    ) -> String {
+        if let existingID = existing?.selectedEngineID, engines[existingID] != nil {
+            return existingID
+        }
+        return installedEngineID
+    }
+
+    private static func selectedMode(
+        existing: SpeechEngineSettings?,
+        selectedEngineID: String,
+        engines: [String: EngineInstallConfig]
+    ) -> SpeechLanguageMode {
+        guard let selected = engines[selectedEngineID] else {
+            return .auto
+        }
+        if let existingMode = existing?.selectedMode, selected.supportedModes.contains(existingMode) {
+            return existingMode
+        }
+        return selected.defaultMode
+    }
+
     private func primaryModel(from variant: SetupVariantManifest) throws -> SetupModelArtifact {
         guard let primaryModel = variant.models.first else {
             throw SetupInstallerError.installFailed("variant does not define any model artifacts")
         }
         return primaryModel
+    }
+
+    private func downloadAndVerify(from sourceURL: URL, to destinationURL: URL, expected: String, force: Bool) throws {
+        try downloadIfNeeded(from: sourceURL, to: destinationURL, force: force)
+        do {
+            try verifyChecksum(fileURL: destinationURL, expected: expected)
+        } catch SetupInstallerError.checksumMismatch where force == false {
+            try fileManager.removeItem(at: destinationURL)
+            try downloadIfNeeded(from: sourceURL, to: destinationURL, force: true)
+            try verifyChecksum(fileURL: destinationURL, expected: expected)
+        }
     }
 
     private func downloadIfNeeded(from sourceURL: URL, to destinationURL: URL, force: Bool) throws {
@@ -225,6 +299,14 @@ private struct SetupInstallLayout {
         self.modelsDirectory = engineRoot.appendingPathComponent("models", isDirectory: true)
         self.binaryURL = runtimeDirectory.appendingPathComponent(runtimeBinaryRelativePath)
         self.modelURL = modelsDirectory.appendingPathComponent(primaryModelRelativePath)
+    }
+
+    func modelURL(relativePath: String) -> URL {
+        modelsDirectory.appendingPathComponent(relativePath)
+    }
+
+    func downloadURL(engineID: String, artifactName: String) -> URL {
+        downloadsDirectory.appendingPathComponent("\(engineID)-\(artifactName)")
     }
 
     func createDirectories(with fileManager: FileManager) throws {
