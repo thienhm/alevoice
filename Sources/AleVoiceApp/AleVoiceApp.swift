@@ -101,6 +101,9 @@ struct AleVoiceApp: App {
             stopRecording: {
                 try await audioRecorder.stop()
             },
+            saveSpeechSettings: { settings in
+                try settings.save(to: configURL)
+            },
             transcribe: { configURL, audioURL, mode in
                 try await Task.detached {
                     let settings = try SpeechEngineSettings.load(from: configURL)

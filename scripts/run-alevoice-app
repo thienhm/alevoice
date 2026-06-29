@@ -6,26 +6,28 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 
 cd "$repo_root"
 
-swift build --product AleVoiceApp >&2
-
-binary_path="$repo_root/.build/debug/AleVoiceApp"
 bundle_path="$repo_root/build/AleVoice.app"
 contents_path="$bundle_path/Contents"
 macos_path="$contents_path/MacOS"
 resources_path="$contents_path/Resources"
 executable_name="AleVoice"
 
-mkdir -p "$macos_path"
-rm -f "$macos_path/AleVoiceApp" "$macos_path/$executable_name"
-cp "$binary_path" "$macos_path/$executable_name"
-chmod +x "$macos_path/$executable_name"
+build_bundle() {
+  swift build --product AleVoiceApp >&2
 
-rm -rf "$resources_path/Config" "$resources_path/data"
-mkdir -p "$resources_path/Config" "$resources_path/data/benchmarks"
-cp -R "$repo_root/Config/." "$resources_path/Config/"
-cp -R "$repo_root/data/benchmarks/samples" "$resources_path/data/benchmarks/samples"
+  local binary_path="$repo_root/.build/debug/AleVoiceApp"
 
-cat > "$contents_path/Info.plist" <<'PLIST'
+  mkdir -p "$macos_path"
+  rm -f "$macos_path/AleVoiceApp" "$macos_path/$executable_name"
+  cp "$binary_path" "$macos_path/$executable_name"
+  chmod +x "$macos_path/$executable_name"
+
+  rm -rf "$resources_path/Config" "$resources_path/data"
+  mkdir -p "$resources_path/Config" "$resources_path/data/benchmarks"
+  cp -R "$repo_root/Config/." "$resources_path/Config/"
+  cp -R "$repo_root/data/benchmarks/samples" "$resources_path/data/benchmarks/samples"
+
+  cat > "$contents_path/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -50,18 +52,35 @@ cat > "$contents_path/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-if command -v codesign >/dev/null 2>&1; then
-  codesign --force --sign - "$bundle_path" >/dev/null
-fi
+  if command -v codesign >/dev/null 2>&1; then
+    codesign --force --sign - "$bundle_path" >/dev/null
+  fi
+}
 
 if [[ $# -gt 0 ]]; then
   if [[ $# -eq 1 && "${1:-}" == "--print-bundle-path" ]]; then
+    build_bundle
     printf '%s\n' "$bundle_path"
     exit 0
   fi
 
-  printf 'usage: %s [--print-bundle-path]\n' "$0" >&2
+  if [[ $# -eq 1 && "${1:-}" == "--build-only" ]]; then
+    build_bundle
+    exit 0
+  fi
+
+  if [[ $# -eq 1 && "${1:-}" == "--run-only" ]]; then
+    if [[ ! -d "$bundle_path" ]]; then
+      printf 'app bundle not found at %s; build it first\n' "$bundle_path" >&2
+      exit 66
+    fi
+    open -n "$bundle_path"
+    exit 0
+  fi
+
+  printf 'usage: %s [--print-bundle-path|--build-only|--run-only]\n' "$0" >&2
   exit 64
 fi
 
+build_bundle
 open -n "$bundle_path"

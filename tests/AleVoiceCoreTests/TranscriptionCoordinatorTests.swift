@@ -115,6 +115,8 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertTrue(output.text.contains("setup funasr-sensevoice"))
         XCTAssertTrue(output.text.contains("setup funasr-nano"))
         XCTAssertTrue(output.text.contains("--mode auto|en|vi"))
+        XCTAssertTrue(output.text.contains("build"))
+        XCTAssertTrue(output.text.contains("run"))
         XCTAssertEqual(errorOutput.text, "")
     }
 
@@ -291,19 +293,20 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertTrue(result.checks.contains(.init(name: "auxiliary-model:encoder", status: .passed, detail: encoderURL.path)))
     }
 
-    func test_cliRunInvokesRepoLauncher() {
+    func test_cliBuildInvokesAppBuilder() {
         let output = LockedTextOutput()
         let errorOutput = LockedTextOutput()
         var invoked = false
 
         let exitCode = AleVoiceCLIProgram.run(
-            arguments: ["run"],
+            arguments: ["build"],
             context: CLIContext(
                 manifestLoader: { _ in fatalError("unexpected") },
                 installer: { _ in fatalError("unexpected") },
                 doctor: { _ in fatalError("unexpected") },
                 transcribe: { _, _, _ in fatalError("unexpected") },
-                runApp: { invoked = true },
+                buildApp: { invoked = true },
+                runApp: { fatalError("unexpected") },
                 configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
                 installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
                 sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
@@ -314,8 +317,63 @@ final class TranscriptionCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(exitCode, 0)
         XCTAssertTrue(invoked)
+        XCTAssertTrue(output.text.contains("built app"))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliRunInvokesAppRunnerWithoutBuilding() {
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+        var buildInvoked = false
+        var runInvoked = false
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["run"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                buildApp: { buildInvoked = true },
+                runApp: { runInvoked = true },
+                configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
+                installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertFalse(buildInvoked)
+        XCTAssertTrue(runInvoked)
         XCTAssertTrue(output.text.contains("launching app"))
         XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliRunSurfacesRunnerFailureWhenBundleIsMissing() {
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["run"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                runApp: { throw CLIError(description: "app bundle not found at /tmp/build/AleVoice.app; build it first") },
+                configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
+                installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        XCTAssertEqual(exitCode, 1)
+        XCTAssertEqual(output.text, "")
+        XCTAssertTrue(errorOutput.text.contains("build it first"))
     }
 
     func test_cliParserRejectsFlagTokenAsConfigValue() {

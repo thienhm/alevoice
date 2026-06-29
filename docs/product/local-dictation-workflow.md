@@ -15,6 +15,8 @@ Define the current native macOS dictation workflow for the menu bar MVP.
   `~/Library/Application Support/AleVoice/`.
 - Repeated setup commands merge engines into the same config instead of
   replacing earlier installs.
+- CLI build prepares/signs `build/AleVoice.app`; CLI run opens the existing
+  bundle without rebuilding it.
 - The app bundle itself does not embed third-party runtime/model payloads in
   this source-first phase.
 

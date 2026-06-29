@@ -48,10 +48,12 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     private let transcriptFormatter: TranscriptFormatter
     private let transcribeClosure: @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult
     private let deliverTranscriptClosure: @Sendable (String) async throws -> Void
+    private let saveSpeechSettingsClosure: @MainActor @Sendable (SpeechEngineSettings) throws -> Void
     private let defaults: UserDefaults
     private var requestToken = 0
     private var pendingGlobalShortcutReleaseConfigURL: URL?
     private var isGlobalShortcutActivationStarting = false
+    private var installedEngineConfigs: [String: EngineInstallConfig] = [:]
 
     public init(
         microphonePermissionStatus: @escaping @Sendable () async -> MicrophonePermissionStatus = { .unknown },
@@ -76,6 +78,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         },
         transcriptFormatter: TranscriptFormatter = TranscriptFormatter(),
         defaults: UserDefaults = .standard,
+        saveSpeechSettings: @escaping @MainActor @Sendable (SpeechEngineSettings) throws -> Void = { _ in },
         transcribe: @escaping @Sendable (URL, URL, SpeechLanguageMode) async throws -> SpeechTranscriptionResult,
         deliverTranscript: @escaping @Sendable (String) async throws -> Void = { _ in }
     ) {
@@ -102,6 +105,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         }
         self.transcribeClosure = transcribe
         self.deliverTranscriptClosure = deliverTranscript
+        self.saveSpeechSettingsClosure = saveSpeechSettings
     }
 
     public var canToggleDictationEnabled: Bool {
@@ -118,6 +122,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     }
 
     public func applySpeechEngineSettings(_ settings: SpeechEngineSettings) {
+        installedEngineConfigs = settings.engines
         availableEngines = settings.availableEngines.map {
             InstalledEngineOption(
                 id: $0.id,
@@ -137,6 +142,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         }
         selectedEngineID = id
         normalizeSelectedMode()
+        persistSelectedSpeechSettings()
     }
 
     public func selectMode(_ mode: SpeechLanguageMode) {
@@ -144,6 +150,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             return
         }
         selectedMode = mode
+        persistSelectedSpeechSettings()
     }
 
     private func normalizeSelectedMode() {
@@ -153,6 +160,23 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         }
         if selectedEngine.supportedModes.contains(selectedMode) == false {
             selectedMode = selectedEngine.defaultMode
+        }
+    }
+
+    private func persistSelectedSpeechSettings() {
+        guard installedEngineConfigs[selectedEngineID] != nil else {
+            return
+        }
+        let settings = SpeechEngineSettings(
+            selectedEngineID: selectedEngineID,
+            selectedMode: selectedMode,
+            engines: installedEngineConfigs
+        )
+        do {
+            try saveSpeechSettingsClosure(settings)
+            errorText = nil
+        } catch {
+            applyError(error)
         }
     }
 

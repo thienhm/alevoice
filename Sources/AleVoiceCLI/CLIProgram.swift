@@ -64,10 +64,33 @@ struct CLIContext {
     let installer: (SetupInstallRequest) throws -> SetupInstallResult
     let doctor: (URL) throws -> SetupDoctorResult
     let transcribe: (URL, URL, SpeechLanguageMode?) throws -> SpeechTranscriptionResult
+    let buildApp: () throws -> Void
     let runApp: () throws -> Void
     let configPathResolver: () -> URL
     let installRootResolver: () -> URL
     let sampleAudioResolver: () -> URL
+
+    init(
+        manifestLoader: @escaping (String) throws -> SetupManifest,
+        installer: @escaping (SetupInstallRequest) throws -> SetupInstallResult,
+        doctor: @escaping (URL) throws -> SetupDoctorResult,
+        transcribe: @escaping (URL, URL, SpeechLanguageMode?) throws -> SpeechTranscriptionResult,
+        buildApp: @escaping () throws -> Void = { throw CLIError(description: "unexpected build") },
+        runApp: @escaping () throws -> Void,
+        configPathResolver: @escaping () -> URL,
+        installRootResolver: @escaping () -> URL,
+        sampleAudioResolver: @escaping () -> URL
+    ) {
+        self.manifestLoader = manifestLoader
+        self.installer = installer
+        self.doctor = doctor
+        self.transcribe = transcribe
+        self.buildApp = buildApp
+        self.runApp = runApp
+        self.configPathResolver = configPathResolver
+        self.installRootResolver = installRootResolver
+        self.sampleAudioResolver = sampleAudioResolver
+    }
 
     static func live() -> CLIContext {
         let configResolver = {
@@ -99,11 +122,18 @@ struct CLIContext {
                 try AleVoiceDoctor(sampleAudioResolver: sampleAudioResolver, transcribe: transcribeClosure).run(configURL: configURL)
             },
             transcribe: transcribeClosure,
+            buildApp: {
+                try CLIProcessRunner().run(command: [
+                    "/bin/sh",
+                    "-lc",
+                    "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app --build-only"
+                ])
+            },
             runApp: {
                 try CLIProcessRunner().run(command: [
                     "/bin/sh",
                     "-lc",
-                    "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app"
+                    "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app --run-only"
                 ])
             },
             configPathResolver: configResolver,
@@ -121,6 +151,7 @@ struct CLIContext {
             installer: { _ in throw CLIError(description: "unexpected install") },
             doctor: { _ in throw CLIError(description: "unexpected doctor") },
             transcribe: { _, _, _ in throw CLIError(description: "unexpected transcribe") },
+            buildApp: { throw CLIError(description: "unexpected build") },
             runApp: { throw CLIError(description: "unexpected run") },
             configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
             installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
@@ -134,6 +165,7 @@ enum CLICommand {
     case setup(engineID: String, configURL: URL?, installRoot: URL?, forceDownload: Bool)
     case doctor(configURL: URL?)
     case transcribe(CLIArguments)
+    case build
     case run
 }
 
@@ -158,6 +190,8 @@ enum CLICommandParser {
             return try parseDoctor(arguments: Array(arguments.dropFirst()))
         case "transcribe":
             return .transcribe(try CLIArguments(arguments: Array(arguments.dropFirst())))
+        case "build":
+            return .build
         case "run":
             return .run
         default:
@@ -231,6 +265,7 @@ enum CLIUsage {
       setup funasr-nano [--config-path <path>] [--install-root <path>] [--force-download]
       doctor [--config-path <path>]
       transcribe [--config <path>] --audio <path> [--mode auto|en|vi]
+      build
       run
 
     notes:
@@ -286,6 +321,10 @@ enum AleVoiceCLIProgram {
                 standardOutput("engine=\(result.engine.rawValue)\n")
                 standardOutput("latency_ms=\(result.latencyMs)\n")
                 standardOutput("\(result.transcript)\n")
+                return 0
+            case .build:
+                try context.buildApp()
+                standardOutput("built app\n")
                 return 0
             case .run:
                 try context.runApp()

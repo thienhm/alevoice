@@ -60,13 +60,19 @@ Each setup command will:
 - merge the installed engine into `Config/speech-engine.json`
 - run `doctor` at the end
 
-4. Build and launch the app:
+4. Build the app:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI build
 ```
 
-5. Approve the macOS permissions the app needs:
+5. Launch the already-built app:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI run
+```
+
+6. Approve the macOS permissions the app needs:
 
 - Microphone
 - Accessibility
@@ -152,7 +158,19 @@ The local development app bundle is written to `build/AleVoice.app` so it is
 visible in Finder and can be selected in macOS Privacy & Security permission
 pickers. SwiftPM build products still live under `.build/`.
 
-Build, ad-hoc sign, and launch the local app bundle:
+Build and ad-hoc sign the local app bundle:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI build
+```
+
+Run the already-built local app bundle:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI run
+```
+
+Or build, sign, and launch in one step:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app

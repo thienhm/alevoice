@@ -370,6 +370,55 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func test_selectingEngineAndModePersistsUpdatedSpeechSettings() async throws {
+        let persistenceProbe = SpeechSettingsPersistenceProbe()
+        let viewModel = TranscriptionDebugViewModel(
+            saveSpeechSettings: { settings in
+                persistenceProbe.record(settings)
+            },
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+        viewModel.applySpeechEngineSettings(
+            SpeechEngineSettings(
+                selectedEngineID: "funasr-sensevoice",
+                selectedMode: .auto,
+                engines: [
+                    "funasr-sensevoice": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR SenseVoice",
+                        binaryPath: "/tmp/sensevoice",
+                        modelPath: "/tmp/sensevoice.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto]
+                    ),
+                    "funasr-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR Nano",
+                        binaryPath: "/tmp/nano",
+                        modelPath: "/tmp/nano.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi]
+                    ),
+                ]
+            )
+        )
+
+        viewModel.selectEngine(id: "funasr-nano")
+        viewModel.selectMode(.vi)
+
+        let saved = persistenceProbe.values()
+        XCTAssertEqual(saved.count, 2)
+        XCTAssertEqual(saved[0].selectedEngineID, "funasr-nano")
+        XCTAssertEqual(saved[0].selectedMode, .auto)
+        XCTAssertEqual(saved[1].selectedEngineID, "funasr-nano")
+        XCTAssertEqual(saved[1].selectedMode, .vi)
+        XCTAssertEqual(saved[1].engines["funasr-sensevoice"]?.supportedModes, [.auto])
+        XCTAssertEqual(saved[1].engines["funasr-nano"]?.supportedModes, [.auto, .en, .vi])
+    }
+
+    @MainActor
     func test_stopRecordingDeliversSuccessfulTranscript() async throws {
         let outputProbe = TranscriptOutputProbe()
         let viewModel = TranscriptionDebugViewModel(
@@ -725,6 +774,19 @@ private actor CallCounter {
     func next() -> Int {
         count += 1
         return count
+    }
+}
+
+@MainActor
+private final class SpeechSettingsPersistenceProbe {
+    private var storedValues: [SpeechEngineSettings] = []
+
+    func record(_ settings: SpeechEngineSettings) {
+        storedValues.append(settings)
+    }
+
+    func values() -> [SpeechEngineSettings] {
+        storedValues
     }
 }
 
