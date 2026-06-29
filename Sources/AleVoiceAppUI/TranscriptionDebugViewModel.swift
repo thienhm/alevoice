@@ -4,6 +4,13 @@ import Foundation
 
 @MainActor
 public final class TranscriptionDebugViewModel: ObservableObject {
+    public struct InstalledEngineOption: Equatable {
+        public let id: String
+        public let displayName: String
+        public let supportedModes: [SpeechLanguageMode]
+        public let defaultMode: SpeechLanguageMode
+    }
+
     nonisolated public static let dictationEnabledDefaultsKey = "dictationEnabled"
 
     @Published public private(set) var sessionState: DictationSessionState = .idle
@@ -16,6 +23,8 @@ public final class TranscriptionDebugViewModel: ObservableObject {
     @Published public private(set) var recordingStatusText: String = "Recorder idle"
     @Published public private(set) var permissionStatusText: String = "Microphone permission: unknown"
     @Published public private(set) var accessibilityStatusText: String = "Accessibility: unknown"
+    @Published public private(set) var availableEngines: [InstalledEngineOption] = []
+    @Published public private(set) var selectedEngineID: String = "funasr-sensevoice"
     @Published public var selectedMode: SpeechLanguageMode = .auto
     @Published public private(set) var inputMonitoringStatusText: String = "Input Monitoring: unknown"
     @Published public private(set) var shortcutDisplayText: String = "Dictation shortcut: not set"
@@ -99,9 +108,52 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         !isCapturingShortcut && !isRunning && !isRecording
     }
 
+    public var availableLanguageModes: [SpeechLanguageMode] {
+        availableEngines.first(where: { $0.id == selectedEngineID })?.supportedModes ?? [.auto]
+    }
+
     public func setDictationEnabled(_ isEnabled: Bool) {
         isDictationEnabled = isEnabled
         defaults.set(isEnabled, forKey: Self.dictationEnabledDefaultsKey)
+    }
+
+    public func applySpeechEngineSettings(_ settings: SpeechEngineSettings) {
+        availableEngines = settings.availableEngines.map {
+            InstalledEngineOption(
+                id: $0.id,
+                displayName: $0.config.displayName,
+                supportedModes: $0.config.supportedModes,
+                defaultMode: $0.config.defaultMode
+            )
+        }
+        selectedEngineID = settings.selectedEngineID
+        selectedMode = settings.selectedMode
+        normalizeSelectedMode()
+    }
+
+    public func selectEngine(id: String) {
+        guard availableEngines.contains(where: { $0.id == id }) else {
+            return
+        }
+        selectedEngineID = id
+        normalizeSelectedMode()
+    }
+
+    public func selectMode(_ mode: SpeechLanguageMode) {
+        guard availableLanguageModes.contains(mode) else {
+            return
+        }
+        selectedMode = mode
+    }
+
+    private func normalizeSelectedMode() {
+        guard let selectedEngine = availableEngines.first(where: { $0.id == selectedEngineID }) else {
+            selectedMode = .auto
+            return
+        }
+        if selectedEngine.supportedModes.contains(selectedMode) == false {
+            selectedMode = selectedEngine.defaultMode
+        }
     }
 
     public func refreshPermissionStatus() async {
@@ -229,7 +281,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
         }
     }
 
-    public func stopRecordingAndTranscribe(configURL: URL, mode: SpeechLanguageMode = .auto) async {
+    public func stopRecordingAndTranscribe(configURL: URL, mode: SpeechLanguageMode? = nil) async {
         guard !isCapturingShortcut else {
             return
         }
@@ -252,7 +304,7 @@ public final class TranscriptionDebugViewModel: ObservableObject {
             isRecording = false
             recordingStatusText = "Transcribing recording"
 
-            let result = try await transcribeClosure(configURL, recording.audioURL, .auto)
+            let result = try await transcribeClosure(configURL, recording.audioURL, mode ?? selectedMode)
             guard token == requestToken else {
                 return
             }

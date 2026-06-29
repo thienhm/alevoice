@@ -4,7 +4,7 @@ public enum SpeechEngineKind: String, Codable, Equatable, Sendable {
     case funasr
 }
 
-public enum SpeechLanguageMode: String, Codable, Equatable, Sendable {
+public enum SpeechLanguageMode: String, Codable, Equatable, Hashable, Sendable {
     case auto
     case en
     case vi

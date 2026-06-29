@@ -17,13 +17,34 @@ public struct ContentView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Dictation mode: Auto")
-
             Toggle("Enabled", isOn: Binding(
                 get: { viewModel.isDictationEnabled },
                 set: { viewModel.setDictationEnabled($0) }
             ))
             .disabled(!viewModel.canToggleDictationEnabled)
+
+            HStack(spacing: 12) {
+                Picker("Model", selection: Binding(
+                    get: { viewModel.selectedEngineID },
+                    set: { viewModel.selectEngine(id: $0) }
+                )) {
+                    ForEach(viewModel.availableEngines, id: \.id) { engine in
+                        Text(engine.displayName).tag(engine.id)
+                    }
+                }
+                .frame(width: 220)
+
+                Picker("Language", selection: Binding(
+                    get: { viewModel.selectedMode },
+                    set: { viewModel.selectMode($0) }
+                )) {
+                    ForEach(viewModel.availableLanguageModes, id: \.rawValue) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .frame(width: 180)
+            }
+            .disabled(viewModel.isCapturingShortcut || viewModel.isRunning || viewModel.isRecording)
 
             HStack(spacing: 12) {
                 Text(viewModel.permissionStatusText)
@@ -112,7 +133,7 @@ public struct ContentView: View {
                     await viewModel.runSample(
                         configURL: configURL,
                         audioURL: sampleAudioURL,
-                        mode: .auto
+                        mode: viewModel.selectedMode
                     )
                 }
             }
@@ -132,6 +153,9 @@ public struct ContentView: View {
         .padding(16)
         .frame(minWidth: 560, minHeight: 260)
         .task {
+            if let settings = try? SpeechEngineSettings.load(from: configURL) {
+                viewModel.applySpeechEngineSettings(settings)
+            }
             viewModel.loadShortcut()
             await viewModel.refreshPermissionStatus()
             await viewModel.refreshAccessibilityStatus()

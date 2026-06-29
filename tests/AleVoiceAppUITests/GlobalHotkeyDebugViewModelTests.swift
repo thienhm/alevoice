@@ -129,7 +129,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func test_hotkeyReleaseAlwaysUsesAutoModeForMvp() async throws {
+    func test_hotkeyReleaseUsesSelectedMode() async throws {
         let probe = TranscriptionProbe()
         let shortcut = try! DictationShortcut(modifiers: [.control], primaryKey: .space)
         let viewModel = TranscriptionDebugViewModel(
@@ -148,12 +148,27 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
                 )
             }
         )
-        viewModel.selectedMode = .vi
+        viewModel.applySpeechEngineSettings(
+            SpeechEngineSettings(
+                selectedEngineID: "funasr-nano",
+                selectedMode: .vi,
+                engines: [
+                    "funasr-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR Nano",
+                        binaryPath: "/tmp/llama-funasr-cli",
+                        modelPath: "/tmp/model.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi]
+                    ),
+                ]
+            )
+        )
         await viewModel.startRecording()
         await viewModel.handleGlobalShortcutRelease(configURL: URL(fileURLWithPath: "/tmp/config.json"))
 
         let invocation = await probe.invocation()
-        XCTAssertEqual(invocation?.mode, .auto)
+        XCTAssertEqual(invocation?.mode, .vi)
     }
 
     @MainActor
@@ -184,7 +199,22 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
                 await outputProbe.record(transcript)
             }
         )
-        viewModel.selectedMode = .vi
+        viewModel.applySpeechEngineSettings(
+            SpeechEngineSettings(
+                selectedEngineID: "funasr-nano",
+                selectedMode: .vi,
+                engines: [
+                    "funasr-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR Nano",
+                        binaryPath: "/tmp/llama-funasr-cli",
+                        modelPath: "/tmp/model.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi]
+                    ),
+                ]
+            )
+        )
 
         let activationTask = Task {
             await viewModel.handleGlobalShortcutActivation()
@@ -205,7 +235,7 @@ final class GlobalHotkeyDebugViewModelTests: XCTestCase {
         let invocation = await transcriptionProbe.invocation()
         XCTAssertEqual(invocation?.configURL, URL(fileURLWithPath: "/tmp/config.json"))
         XCTAssertEqual(invocation?.audioURL, URL(fileURLWithPath: "/tmp/captured.wav"))
-        XCTAssertEqual(invocation?.mode, .auto)
+        XCTAssertEqual(invocation?.mode, .vi)
         let didStop = await recordingProbe.didStop()
         XCTAssertTrue(didStop)
         XCTAssertFalse(viewModel.isRecording)

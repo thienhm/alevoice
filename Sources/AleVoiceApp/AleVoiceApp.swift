@@ -112,6 +112,9 @@ struct AleVoiceApp: App {
                 try await transcriptOutputService.deliver(transcript)
             }
         )
+        if let settings = try? SpeechEngineSettings.load(from: configURL) {
+            viewModel.applySpeechEngineSettings(settings)
+        }
 
         hotkeyMonitor.onTransition = { transition in
             Task { @MainActor in

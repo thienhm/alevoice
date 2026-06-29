@@ -240,7 +240,7 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func test_stopRecordingUsesAutoModeForMvpRecordingFlow() async throws {
+    func test_stopRecordingUsesSelectedModeForRecordingFlow() async throws {
         let capturedURL = URL(fileURLWithPath: "/tmp/captured.wav")
         let probe = TranscriptionProbe()
         let viewModel = TranscriptionDebugViewModel(
@@ -258,22 +258,115 @@ final class TranscriptionDebugViewModelTests: XCTestCase {
                 )
             }
         )
+        viewModel.applySpeechEngineSettings(
+            SpeechEngineSettings(
+                selectedEngineID: "funasr-nano",
+                selectedMode: .vi,
+                engines: [
+                    "funasr-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR Nano",
+                        binaryPath: "/tmp/llama-funasr-cli",
+                        modelPath: "/tmp/model.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi]
+                    ),
+                ]
+            )
+        )
 
         await viewModel.startRecording()
         await viewModel.stopRecordingAndTranscribe(
-            configURL: URL(fileURLWithPath: "/tmp/config.json"),
-            mode: .vi
+            configURL: URL(fileURLWithPath: "/tmp/config.json")
         )
 
         let invocation = await probe.invocation()
         XCTAssertEqual(invocation?.configURL, URL(fileURLWithPath: "/tmp/config.json"))
         XCTAssertEqual(invocation?.audioURL, capturedURL)
-        XCTAssertEqual(invocation?.mode, .auto)
+        XCTAssertEqual(invocation?.mode, .vi)
         XCTAssertFalse(viewModel.isRecording)
         XCTAssertEqual(viewModel.recordingStatusText, "Last recording ready")
         XCTAssertEqual(viewModel.transcript, "captured speech")
         XCTAssertEqual(viewModel.latencyText, "456 ms")
         XCTAssertNil(viewModel.errorText)
+    }
+
+    @MainActor
+    func test_selectingEngineFiltersUnsupportedMode() {
+        let viewModel = TranscriptionDebugViewModel(
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+        viewModel.applySpeechEngineSettings(
+            SpeechEngineSettings(
+                selectedEngineID: "funasr-nano",
+                selectedMode: .vi,
+                engines: [
+                    "funasr-sensevoice": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR SenseVoice",
+                        binaryPath: "/tmp/sensevoice",
+                        modelPath: "/tmp/sensevoice.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto]
+                    ),
+                    "funasr-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR Nano",
+                        binaryPath: "/tmp/nano",
+                        modelPath: "/tmp/nano.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi]
+                    ),
+                ]
+            )
+        )
+
+        viewModel.selectEngine(id: "funasr-sensevoice")
+
+        XCTAssertEqual(viewModel.selectedEngineID, "funasr-sensevoice")
+        XCTAssertEqual(viewModel.selectedMode, .auto)
+        XCTAssertEqual(viewModel.availableLanguageModes, [.auto])
+    }
+
+    @MainActor
+    func test_modeOptionsFollowSelectedEngine() {
+        let viewModel = TranscriptionDebugViewModel(
+            transcribe: { _, _, _ async throws in
+                fatalError("transcribe should not be called")
+            }
+        )
+        viewModel.applySpeechEngineSettings(
+            SpeechEngineSettings(
+                selectedEngineID: "funasr-sensevoice",
+                selectedMode: .auto,
+                engines: [
+                    "funasr-sensevoice": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR SenseVoice",
+                        binaryPath: "/tmp/sensevoice",
+                        modelPath: "/tmp/sensevoice.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto]
+                    ),
+                    "funasr-nano": EngineInstallConfig(
+                        engineKind: .funasr,
+                        displayName: "FunASR Nano",
+                        binaryPath: "/tmp/nano",
+                        modelPath: "/tmp/nano.gguf",
+                        defaultMode: .auto,
+                        supportedModes: [.auto, .en, .vi]
+                    ),
+                ]
+            )
+        )
+
+        XCTAssertEqual(viewModel.availableLanguageModes, [.auto])
+
+        viewModel.selectEngine(id: "funasr-nano")
+
+        XCTAssertEqual(viewModel.availableLanguageModes, [.auto, .en, .vi])
     }
 
     @MainActor
