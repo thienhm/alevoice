@@ -40,18 +40,24 @@ If that command fails, install them with:
 xcode-select --install
 ```
 
-3. Create a local speech-engine config from the example:
+3. Install at least one local speech engine:
 
 ```bash
 swift run AleVoiceCLI setup funasr-sensevoice
 ```
 
-That one command will:
+Optionally add Nano side-by-side:
 
-- download the pinned FunASR runtime and SenseVoice model
+```bash
+swift run AleVoiceCLI setup funasr-nano
+```
+
+Each setup command will:
+
+- download the pinned FunASR runtime and engine model artifacts
 - verify checksums
 - install them under `~/Library/Application Support/AleVoice/`
-- write `Config/speech-engine.json`
+- merge the installed engine into `Config/speech-engine.json`
 - run `doctor` at the end
 
 4. Build and launch the app:
@@ -74,7 +80,7 @@ sample transcription path.
 
 - Runs locally on macOS 14 or newer.
 - Lives in the menu bar as a resident utility.
-- Uses Auto language mode for MVP dictation.
+- Lets the user choose an installed local model and a supported language mode.
 - Records while the configured shortcut is held.
 - Transcribes after release through the configured local FunASR runtime.
 - Normalizes a small English/Vietnamese formatting command set.
@@ -83,9 +89,10 @@ sample transcription path.
   accessible from the menu/settings surfaces.
 - Keeps sample-audio transcription display-only.
 
-Forced English/Vietnamese recognition, caret-relative overlay placement,
-notarized packaging, and installer polish are intentionally out of scope for the
-current MVP.
+Caret-relative overlay placement, notarized packaging, and installer polish are
+intentionally out of scope for the current MVP. Explicit Nano language forcing
+still depends on the pinned runtime surface; AleVoice only exposes modes
+declared by the installed engine config.
 
 ## Repository Shape
 
@@ -155,6 +162,12 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI \
   --config Config/speech-engine.json \
   --audio data/benchmarks/samples/en-001.wav \
   --mode auto
+```
+
+Inspect multi-engine CLI help:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI --help
 ```
 
 Check the current setup state:

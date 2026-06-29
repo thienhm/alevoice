@@ -1,11 +1,25 @@
 {
-  "selectedEngine": "funasr-sensevoice",
+  "selectedEngine": "funasr-nano",
+  "selectedMode": "vi",
   "engines": {
     "funasr-sensevoice": {
       "engineKind": "funasr",
+      "displayName": "FunASR SenseVoice",
       "binaryPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-sensevoice/current/runtime/llama-funasr-sensevoice",
       "modelPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-sensevoice/current/models/sensevoice-small-f16.gguf",
-      "defaultMode": "auto"
+      "defaultMode": "auto",
+      "supportedModes": ["auto"]
+    },
+    "funasr-nano": {
+      "engineKind": "funasr",
+      "displayName": "FunASR Nano",
+      "binaryPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-nano/current/runtime/llama-funasr-cli",
+      "modelPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-nano/current/models/qwen3-0.6b-q4km.gguf",
+      "auxiliaryModelPaths": {
+        "encoder": "/Users/me/Library/Application Support/AleVoice/engines/funasr-nano/current/models/funasr-encoder-f16.gguf"
+      },
+      "defaultMode": "auto",
+      "supportedModes": ["auto", "en", "vi"]
     }
   }
 }

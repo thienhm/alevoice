@@ -6,11 +6,15 @@ Define the current native macOS dictation workflow for the menu bar MVP.
 
 ## Source-First Setup
 
-- Alpha users install the current pinned runtime/model with
+- Alpha users install one or more pinned local engines with
   `swift run AleVoiceCLI setup funasr-sensevoice`.
+- Optional second install path:
+  `swift run AleVoiceCLI setup funasr-nano`.
 - Setup writes repo-local config at `Config/speech-engine.json`.
 - Managed runtime/model artifacts live under
   `~/Library/Application Support/AleVoice/`.
+- Repeated setup commands merge engines into the same config instead of
+  replacing earlier installs.
 - The app bundle itself does not embed third-party runtime/model payloads in
   this source-first phase.
 
@@ -23,7 +27,8 @@ Define the current native macOS dictation workflow for the menu bar MVP.
   window before recording.
 - User can open the Accessibility and Input Monitoring privacy panes directly
   from the settings/debug window.
-- MVP dictation uses Auto language mode.
+- User can choose the active installed model in the settings/debug window.
+- User can choose a language mode supported by the selected model.
 - User can enable or disable dictation from the menu bar menu and the
   settings/debug window.
 - Dictation stays enabled by default across relaunches.
@@ -57,7 +62,13 @@ Define the current native macOS dictation workflow for the menu bar MVP.
 
 ## Out Of Scope
 
-- Forced English or Vietnamese recognition mode in the MVP workflow.
 - Caret-relative overlay placement.
 - Distribution packaging and notarization.
 - Conflict resolution beyond rejecting unsupported or modifier-free shortcuts
+
+## Runtime Caveat
+
+- SenseVoice currently remains Auto-only in the pinned local config.
+- Nano may declare `auto`, `en`, and `vi` support in config, but any explicit
+  runtime forcing must still match the pinned binary surface. AleVoice should
+  only expose modes that are actually declared by installed engine metadata.
