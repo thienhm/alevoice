@@ -43,30 +43,24 @@ xcode-select --install
 3. Create a local speech-engine config from the example:
 
 ```bash
-cp Config/speech-engine.example.json Config/speech-engine.json
+swift run AleVoiceCLI setup funasr-sensevoice
 ```
 
-4. Edit `Config/speech-engine.json` so these absolute paths point at your local
-   FunASR runtime binary and GGUF model:
+That one command will:
 
-```json
-{
-  "engine": "funasr",
-  "funasr": {
-    "binaryPath": "/absolute/path/to/llama-funasr-sensevoice",
-    "modelPath": "/absolute/path/to/sensevoice-small-f16.gguf",
-    "defaultMode": "auto"
-  }
-}
-```
+- download the pinned FunASR runtime and SenseVoice model
+- verify checksums
+- install them under `~/Library/Application Support/AleVoice/`
+- write `Config/speech-engine.json`
+- run `doctor` at the end
 
-5. Build and launch the app:
+4. Build and launch the app:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app
 ```
 
-6. Approve the macOS permissions the app needs:
+5. Approve the macOS permissions the app needs:
 
 - Microphone
 - Accessibility
@@ -124,7 +118,7 @@ start with `AGENTS.md` and the Harness-required docs listed there.
 - Xcode command line tools available at
   `/Applications/Xcode.app/Contents/Developer`
 - Local speech engine config at `Config/speech-engine.json`
-- Local FunASR runtime/model paths referenced by that config
+- Managed AleVoice runtime/model install under `~/Library/Application Support/AleVoice/`
 - Microphone, Input Monitoring, and Accessibility permission for the signed app
   bundle when validating the full dictation/paste path
 
@@ -157,9 +151,16 @@ Run a CLI transcription smoke test:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI \
+  transcribe \
   --config Config/speech-engine.json \
   --audio data/benchmarks/samples/en-001.wav \
   --mode auto
+```
+
+Check the current setup state:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI doctor
 ```
 
 For Codex/agent work, the equivalent commands are:
@@ -168,6 +169,11 @@ For Codex/agent work, the equivalent commands are:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app
 ```
+
+AleVoice does not bundle the FunASR runtime or model inside the app bundle in
+this alpha. Those artifacts are large, third-party, updated independently, and
+downloaded through the explicit setup command so the trust boundary stays
+visible and checksum-verified.
 
 Check Harness story proof when the Harness CLI is installed locally:
 

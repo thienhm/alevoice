@@ -4,6 +4,16 @@
 
 Define the current native macOS dictation workflow for the menu bar MVP.
 
+## Source-First Setup
+
+- Alpha users install the current pinned runtime/model with
+  `swift run AleVoiceCLI setup funasr-sensevoice`.
+- Setup writes repo-local config at `Config/speech-engine.json`.
+- Managed runtime/model artifacts live under
+  `~/Library/Application Support/AleVoice/`.
+- The app bundle itself does not embed third-party runtime/model payloads in
+  this source-first phase.
+
 ## Current Workflow Contract
 
 - User launches resident menu bar app locally.

@@ -71,12 +71,142 @@ final class TranscriptionCoordinatorTests: XCTestCase {
 
         let exitCode = AleVoiceCLIProgram.run(
             arguments: ["--help"],
+            context: .failingDefaults(),
             standardOutput: output.append,
             standardError: errorOutput.append
         )
 
         XCTAssertEqual(exitCode, 0)
-        XCTAssertEqual(output.text, CLIArguments.usage + "\n")
+        XCTAssertTrue(output.text.contains("usage: AleVoiceCLI"))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliMapsLegacyRootFlagsToTranscribe() throws {
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+        var capturedAudioURL: URL?
+        var capturedConfigURL: URL?
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["--config", "/tmp/config.json", "--audio", "/tmp/sample.wav", "--mode", "auto"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { configURL, audioURL, mode in
+                    capturedConfigURL = configURL
+                    capturedAudioURL = audioURL
+                    XCTAssertEqual(mode, .auto)
+                    return .init(engine: .funasr, modelIdentifier: "model", transcript: "hello", latencyMs: 123)
+                },
+                runApp: { fatalError("unexpected") },
+                configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
+                installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertEqual(capturedConfigURL?.path, "/tmp/config.json")
+        XCTAssertEqual(capturedAudioURL?.path, "/tmp/sample.wav")
+        XCTAssertTrue(output.text.contains("engine=funasr"))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliSetupRunsInstallerForKnownEngine() {
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+        var capturedRequest: SetupInstallRequest?
+        let manifest = try! SetupManifest.load(
+            from: URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+                .appendingPathComponent("Config/engines/funasr-sensevoice.json")
+        )
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["setup", "funasr-sensevoice"],
+            context: CLIContext(
+                manifestLoader: { _ in manifest },
+                installer: { request in
+                    capturedRequest = request
+                    return SetupInstallResult(
+                        binaryURL: URL(fileURLWithPath: "/tmp/install/runtime/llama-funasr-sensevoice"),
+                        modelURL: URL(fileURLWithPath: "/tmp/install/models/sensevoice-small-f16.gguf"),
+                        configURL: URL(fileURLWithPath: "/tmp/config.json"),
+                        doctorResult: SetupDoctorResult(checks: [.init(name: "config", status: .passed, detail: "ok")])
+                    )
+                },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                runApp: { fatalError("unexpected") },
+                configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
+                installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertEqual(capturedRequest?.manifest.id, "funasr-sensevoice")
+        XCTAssertTrue(output.text.contains("installed funasr-sensevoice"))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliDoctorReportsMissingConfig() {
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["doctor"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in
+                    SetupDoctorResult(
+                        checks: [.init(name: "config", status: .failed, detail: "missing config")]
+                    )
+                },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                runApp: { fatalError("unexpected") },
+                configPathResolver: { URL(fileURLWithPath: "/tmp/missing-config.json") },
+                installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        XCTAssertEqual(exitCode, 1)
+        XCTAssertTrue(output.text.contains("config: failed"))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliRunInvokesRepoLauncher() {
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+        var invoked = false
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["run"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                runApp: { invoked = true },
+                configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
+                installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertTrue(invoked)
+        XCTAssertTrue(output.text.contains("launching app"))
         XCTAssertEqual(errorOutput.text, "")
     }
 

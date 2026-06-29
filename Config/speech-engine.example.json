@@ -1,8 +1,11 @@
 {
-  "engine": "funasr",
-  "funasr": {
-    "binaryPath": "/absolute/path/to/llama-funasr-sensevoice",
-    "modelPath": "/absolute/path/to/sensevoice-small-f16.gguf",
-    "defaultMode": "auto"
+  "selectedEngine": "funasr-sensevoice",
+  "engines": {
+    "funasr-sensevoice": {
+      "engineKind": "funasr",
+      "binaryPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-sensevoice/current/runtime/llama-funasr-sensevoice",
+      "modelPath": "/Users/me/Library/Application Support/AleVoice/engines/funasr-sensevoice/current/models/sensevoice-small-f16.gguf",
+      "defaultMode": "auto"
+    }
   }
 }

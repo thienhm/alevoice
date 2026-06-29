@@ -1,0 +1,32 @@
+{
+  "id": "funasr-sensevoice",
+  "displayName": "FunASR SenseVoice",
+  "description": "Pinned FunASR llama.cpp runtime with the SenseVoice small f16 GGUF model.",
+  "engineKind": "funasr",
+  "defaultVariant": "f16",
+  "variants": {
+    "f16": {
+      "runtime": {
+        "platforms": {
+          "macos-arm64": {
+            "url": "https://github.com/modelscope/FunASR/releases/download/runtime-llamacpp-v0.1.2/funasr-llamacpp-macos-arm64.tar.gz",
+            "sha256": "50a36463372eb87adf9e0829aa62b29ce94d7ba84ded705b9e81c768c274d923"
+          }
+        },
+        "unpack": "tar.gz",
+        "binaryRelativePath": "llama-funasr-sensevoice"
+      },
+      "models": [
+        {
+          "id": "main",
+          "url": "https://huggingface.co/FunAudioLLM/SenseVoiceSmall-GGUF/resolve/main/sensevoice-small-f16.gguf",
+          "sha256": "2389039651f4574dbd674f1f1e296b8b1147b2e19a5fd9c2cd69e82669c78d8e",
+          "relativePath": "sensevoice-small-f16.gguf"
+        }
+      ],
+      "configTemplate": {
+        "defaultMode": "auto"
+      }
+    }
+  }
+}
