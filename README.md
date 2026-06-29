@@ -8,6 +8,74 @@ commands, and pastes the result into the focused text field.
 The current MVP is a resident menu bar app with a settings/debug window for
 permissions, shortcut setup, sample transcription, and local diagnostics.
 
+## Status
+
+AleVoice is currently an alpha, source-first macOS app. The supported
+distribution path today is:
+
+- clone the repository
+- point the app at a local FunASR runtime and model
+- build and run the local app bundle on macOS
+
+Signed, notarized drag-and-drop releases are not available yet.
+
+## Quick Start For Alpha Testers
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/thienhm/alevoice.git
+cd alevoice
+```
+
+2. Make sure Xcode command line tools are installed:
+
+```bash
+xcode-select -p
+```
+
+If that command fails, install them with:
+
+```bash
+xcode-select --install
+```
+
+3. Create a local speech-engine config from the example:
+
+```bash
+cp Config/speech-engine.example.json Config/speech-engine.json
+```
+
+4. Edit `Config/speech-engine.json` so these absolute paths point at your local
+   FunASR runtime binary and GGUF model:
+
+```json
+{
+  "engine": "funasr",
+  "funasr": {
+    "binaryPath": "/absolute/path/to/llama-funasr-sensevoice",
+    "modelPath": "/absolute/path/to/sensevoice-small-f16.gguf",
+    "defaultMode": "auto"
+  }
+}
+```
+
+5. Build and launch the app:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app
+```
+
+6. Approve the macOS permissions the app needs:
+
+- Microphone
+- Accessibility
+- Input Monitoring
+
+Once launched, AleVoice runs as a menu bar app. Open the settings/debug window
+from the menu bar to inspect permission state, record a shortcut, and run the
+sample transcription path.
+
 ## Current MVP Contract
 
 - Runs locally on macOS 14 or newer.
@@ -17,7 +85,8 @@ permissions, shortcut setup, sample transcription, and local diagnostics.
 - Transcribes after release through the configured local FunASR runtime.
 - Normalizes a small English/Vietnamese formatting command set.
 - Pastes successful recording transcripts with clipboard-backed `Cmd+V`.
-- Shows small overlay feedback for recording, processing, success, and error.
+- Shows recording state through the menu bar waveform icon and keeps error text
+  accessible from the menu/settings surfaces.
 - Keeps sample-audio transcription display-only.
 
 Forced English/Vietnamese recognition, caret-relative overlay placement,
@@ -61,40 +130,50 @@ start with `AGENTS.md` and the Harness-required docs listed there.
 
 `Config/speech-engine.example.json` shows the expected config shape.
 
+For Codex agent work in this repo, shell examples are usually shown with `rtk`.
+For a normal local terminal, run the same commands without the `rtk` prefix.
+
 ## Common Commands
 
 Run all Swift tests:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
 ```
 
 Build and print the app bundle path:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app --print-bundle-path
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app --print-bundle-path
 ```
 
 Build, ad-hoc sign, and launch the local app bundle:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app
 ```
 
 Run a CLI transcription smoke test:
 
 ```bash
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift run AleVoiceCLI \
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI \
   --config Config/speech-engine.json \
   --audio data/benchmarks/samples/en-001.wav \
   --mode auto
 ```
 
-Check Harness story proof:
+For Codex/agent work, the equivalent commands are:
 
 ```bash
-rtk ./scripts/bin/harness-cli query matrix
-rtk ./scripts/bin/harness-cli story verify US-007
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk swift test
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer rtk ./scripts/run-alevoice-app
+```
+
+Check Harness story proof when the Harness CLI is installed locally:
+
+```bash
+./scripts/bin/harness-cli query matrix
+./scripts/bin/harness-cli story verify US-007
 ```
 
 ## Validation Notes
@@ -105,7 +184,7 @@ The automated MVP floor is the full Swift test suite. Platform validation adds:
 - menu bar menu exposes state, permissions, shortcut, settings, and quit
 - settings window opens from the menu bar
 - global shortcut starts/stops recording after Input Monitoring approval
-- overlay appears during recording/processing states
+- menu bar waveform icon turns red while recording
 - focused-app paste works after Accessibility approval
 
 When macOS TCC gets confused by rebuilt ad-hoc bundles, reset permissions for
