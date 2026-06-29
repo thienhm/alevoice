@@ -15,13 +15,13 @@ final class DebugAssetLocatorTests: XCTestCase {
 
         let locator = DebugAssetLocator(
             currentDirectoryURL: root,
-            bundleURL: URL(fileURLWithPath: "/tmp/AleVoiceApp.app", isDirectory: true)
+            bundleURL: URL(fileURLWithPath: "/tmp/AleVoice.app", isDirectory: true)
         )
 
         XCTAssertEqual(locator.speechEngineConfigURL(), configURL)
     }
 
-    func test_speechEngineConfigURLFallsBackFromBundleToRepositoryRoot() throws {
+    func test_speechEngineConfigURLFallsBackFromVisibleBuildBundleToRepositoryRoot() throws {
         let root = try makeDirectory(named: "bundle-root")
         let configURL = root
             .appendingPathComponent("Config", isDirectory: true)
@@ -33,7 +33,7 @@ final class DebugAssetLocatorTests: XCTestCase {
         try Data("{}".utf8).write(to: configURL)
 
         let bundleURL = root
-            .appendingPathComponent(".build/debug/AleVoiceApp.app", isDirectory: true)
+            .appendingPathComponent("build/AleVoice.app", isDirectory: true)
         try FileManager.default.createDirectory(
             at: bundleURL,
             withIntermediateDirectories: true
@@ -49,7 +49,7 @@ final class DebugAssetLocatorTests: XCTestCase {
 
     func test_speechEngineConfigURLPrefersBundledResourceWhenInstalledOutsideRepository() throws {
         let appURL = try makeDirectory(named: "installed-app")
-            .appendingPathComponent("AleVoiceApp.app", isDirectory: true)
+            .appendingPathComponent("AleVoice.app", isDirectory: true)
         let resourceConfigURL = appURL
             .appendingPathComponent("Contents/Resources/Config", isDirectory: true)
             .appendingPathComponent("speech-engine.json")

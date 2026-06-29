@@ -9,6 +9,7 @@ dist/
 
 # Swift Package Manager build output.
 .build/
+build/
 
 # Downloaded Harness CLI binary for installed project instances.
 scripts/bin/harness-cli

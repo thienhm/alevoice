@@ -148,6 +148,10 @@ Build and print the app bundle path:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/run-alevoice-app --print-bundle-path
 ```
 
+The local development app bundle is written to `build/AleVoice.app` so it is
+visible in Finder and can be selected in macOS Privacy & Security permission
+pickers. SwiftPM build products still live under `.build/`.
+
 Build, ad-hoc sign, and launch the local app bundle:
 
 ```bash
@@ -210,8 +214,8 @@ When macOS TCC gets confused by rebuilt ad-hoc bundles, reset permissions for
 the bundle identifier and relaunch:
 
 ```bash
-tccutil reset ListenEvent dev.alevoice.AleVoiceApp
-tccutil reset Accessibility dev.alevoice.AleVoiceApp
+tccutil reset ListenEvent dev.thienhuynh.alevoice
+tccutil reset Accessibility dev.thienhuynh.alevoice
 ```
 
 Then approve the permissions from System Settings when prompted.

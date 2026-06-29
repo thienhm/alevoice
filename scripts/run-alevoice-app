@@ -6,18 +6,19 @@ export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Develope
 
 cd "$repo_root"
 
-swift build --product AleVoiceApp
+swift build --product AleVoiceApp >&2
 
 binary_path="$repo_root/.build/debug/AleVoiceApp"
-bundle_path="$repo_root/.build/debug/AleVoiceApp.app"
+bundle_path="$repo_root/build/AleVoice.app"
 contents_path="$bundle_path/Contents"
 macos_path="$contents_path/MacOS"
 resources_path="$contents_path/Resources"
+executable_name="AleVoice"
 
 mkdir -p "$macos_path"
-rm -f "$macos_path/AleVoiceApp"
-cp "$binary_path" "$macos_path/AleVoiceApp"
-chmod +x "$macos_path/AleVoiceApp"
+rm -f "$macos_path/AleVoiceApp" "$macos_path/$executable_name"
+cp "$binary_path" "$macos_path/$executable_name"
+chmod +x "$macos_path/$executable_name"
 
 rm -rf "$resources_path/Config" "$resources_path/data"
 mkdir -p "$resources_path/Config" "$resources_path/data/benchmarks"
@@ -30,11 +31,11 @@ cat > "$contents_path/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
   <key>CFBundleExecutable</key>
-  <string>AleVoiceApp</string>
+  <string>AleVoice</string>
   <key>CFBundleIdentifier</key>
-  <string>dev.alevoice.AleVoiceApp</string>
+  <string>dev.thienhuynh.alevoice</string>
   <key>CFBundleName</key>
-  <string>AleVoiceApp</string>
+  <string>AleVoice</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleVersion</key>

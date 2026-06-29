@@ -47,7 +47,7 @@ public struct DebugAssetLocator {
     private func repositoryRootURL() -> URL {
         var cursor = bundleURL.standardizedFileURL
         while cursor.path != "/" {
-            if cursor.lastPathComponent == ".build" {
+            if cursor.lastPathComponent == ".build" || cursor.lastPathComponent == "build" {
                 return cursor.deletingLastPathComponent()
             }
             let packageURL = cursor.appendingPathComponent("Package.swift")
