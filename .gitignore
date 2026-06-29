@@ -28,3 +28,6 @@ __pycache__/
 
 # Local native speech-engine config override.
 Config/speech-engine.json
+
+# Local git worktrees.
+.worktrees/
