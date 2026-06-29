@@ -35,33 +35,7 @@ struct AleVoiceDoctor {
             return SetupDoctorResult(checks: checks)
         }
 
-        let binaryURL = URL(fileURLWithPath: settings.funasr.binaryPath)
-        if fileManager.fileExists(atPath: binaryURL.path) {
-            checks.append(.init(name: "binary", status: .passed, detail: binaryURL.path))
-        } else {
-            checks.append(.init(name: "binary", status: .failed, detail: "missing binary at \(binaryURL.path)"))
-        }
-
-        if fileManager.isExecutableFile(atPath: binaryURL.path) {
-            checks.append(.init(name: "binary-executable", status: .passed, detail: binaryURL.path))
-        } else {
-            checks.append(.init(name: "binary-executable", status: .failed, detail: "binary is not executable"))
-        }
-
-        let modelURL = URL(fileURLWithPath: settings.funasr.modelPath)
-        if fileManager.fileExists(atPath: modelURL.path) {
-            checks.append(.init(name: "model", status: .passed, detail: modelURL.path))
-        } else {
-            checks.append(.init(name: "model", status: .failed, detail: "missing model at \(modelURL.path)"))
-        }
-
-        for (key, path) in settings.selectedEngineConfig.auxiliaryModelPaths.sorted(by: { $0.key < $1.key }) {
-            if fileManager.fileExists(atPath: path) {
-                checks.append(.init(name: "auxiliary-model:\(key)", status: .passed, detail: path))
-            } else {
-                checks.append(.init(name: "auxiliary-model:\(key)", status: .failed, detail: "missing model at \(path)"))
-            }
-        }
+        appendEngineChecks(settings: settings, to: &checks)
 
         let sampleAudioURL = sampleAudioResolver()
         if fileManager.fileExists(atPath: sampleAudioURL.path) {
@@ -80,5 +54,61 @@ struct AleVoiceDoctor {
         }
 
         return SetupDoctorResult(checks: checks)
+    }
+
+    private func appendEngineChecks(settings: SpeechEngineSettings, to checks: inout [SetupDoctorCheck]) {
+        for (engineID, config) in settings.availableEngines {
+            let selectedMarker = engineID == settings.selectedEngineID ? " | selected" : ""
+            let modes = config.supportedModes.map(\.rawValue).joined(separator: ",")
+            checks.append(.init(
+                name: "engine:\(engineID)",
+                status: .passed,
+                detail: "\(config.displayName)\(selectedMarker) | modes=\(modes) | default=\(config.defaultMode.rawValue) | runtime=\(config.runtimeProfile.rawValue)"
+            ))
+
+            let binaryURL = URL(fileURLWithPath: config.binaryPath)
+            if fileManager.fileExists(atPath: binaryURL.path) {
+                checks.append(.init(name: "engine:\(engineID):binary", status: .passed, detail: binaryURL.path))
+            } else {
+                checks.append(.init(
+                    name: "engine:\(engineID):binary",
+                    status: .failed,
+                    detail: "missing binary at \(binaryURL.path)"
+                ))
+            }
+
+            if fileManager.isExecutableFile(atPath: binaryURL.path) {
+                checks.append(.init(name: "engine:\(engineID):binary-executable", status: .passed, detail: binaryURL.path))
+            } else {
+                checks.append(.init(
+                    name: "engine:\(engineID):binary-executable",
+                    status: .failed,
+                    detail: "binary is not executable"
+                ))
+            }
+
+            let modelURL = URL(fileURLWithPath: config.modelPath)
+            if fileManager.fileExists(atPath: modelURL.path) {
+                checks.append(.init(name: "engine:\(engineID):model", status: .passed, detail: modelURL.path))
+            } else {
+                checks.append(.init(
+                    name: "engine:\(engineID):model",
+                    status: .failed,
+                    detail: "missing model at \(modelURL.path)"
+                ))
+            }
+
+            for (key, path) in config.auxiliaryModelPaths.sorted(by: { $0.key < $1.key }) {
+                if fileManager.fileExists(atPath: path) {
+                    checks.append(.init(name: "engine:\(engineID):auxiliary-model:\(key)", status: .passed, detail: path))
+                } else {
+                    checks.append(.init(
+                        name: "engine:\(engineID):auxiliary-model:\(key)",
+                        status: .failed,
+                        detail: "missing model at \(path)"
+                    ))
+                }
+            }
+        }
     }
 }

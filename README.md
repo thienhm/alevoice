@@ -206,6 +206,13 @@ Check the current setup state:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI doctor
 ```
 
+`doctor` now reports:
+
+- selected engine id and selected language mode
+- every installed engine with display name, supported modes, default mode, and runtime profile
+- binary/model/auxiliary-model presence for each installed engine
+- sample audio presence and sample transcription result for the selected engine
+
 For Codex/agent work, the equivalent commands are:
 
 ```bash

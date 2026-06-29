@@ -291,7 +291,85 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         ).run(configURL: configURL)
 
         XCTAssertTrue(result.checks.contains(.init(name: "selected-mode", status: .passed, detail: "en")))
-        XCTAssertTrue(result.checks.contains(.init(name: "auxiliary-model:encoder", status: .passed, detail: encoderURL.path)))
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-nano", status: .passed, detail: "FunASR Nano | selected | modes=auto,en | default=auto | runtime=llamaCpp")))
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-nano:auxiliary-model:encoder", status: .passed, detail: encoderURL.path)))
+    }
+
+    func test_doctorReportsEveryInstalledEngineWithModesAndRuntimeProfile() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let senseVoiceBinaryURL = root.appendingPathComponent("sensevoice-runtime")
+        let senseVoiceModelURL = root.appendingPathComponent("sensevoice.gguf")
+        let nanoBinaryURL = root.appendingPathComponent("nano-runtime")
+        let nanoModelURL = root.appendingPathComponent("nano.gguf")
+        let nanoEncoderURL = root.appendingPathComponent("nano-encoder.gguf")
+        let mltBinaryURL = root.appendingPathComponent("crispasr")
+        let mltModelURL = root.appendingPathComponent("mlt.gguf")
+        let sampleURL = root.appendingPathComponent("sample.wav")
+        for url in [
+            senseVoiceBinaryURL,
+            senseVoiceModelURL,
+            nanoBinaryURL,
+            nanoModelURL,
+            nanoEncoderURL,
+            mltBinaryURL,
+            mltModelURL,
+            sampleURL,
+        ] {
+            try Data("ok".utf8).write(to: url)
+        }
+        for url in [senseVoiceBinaryURL, nanoBinaryURL, mltBinaryURL] {
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+        }
+        let configURL = root.appendingPathComponent("speech-engine.json")
+        let settings = SpeechEngineSettings(
+            selectedEngineID: "funasr-mlt-nano",
+            selectedMode: .vi,
+            engines: [
+                "funasr-sensevoice": EngineInstallConfig(
+                    engineKind: .funasr,
+                    displayName: "FunASR SenseVoice",
+                    binaryPath: senseVoiceBinaryURL.path,
+                    modelPath: senseVoiceModelURL.path,
+                    defaultMode: .auto,
+                    supportedModes: [.auto]
+                ),
+                "funasr-nano": EngineInstallConfig(
+                    engineKind: .funasr,
+                    displayName: "FunASR Nano",
+                    binaryPath: nanoBinaryURL.path,
+                    modelPath: nanoModelURL.path,
+                    defaultMode: .auto,
+                    supportedModes: [.auto, .en],
+                    auxiliaryModelPaths: ["encoder": nanoEncoderURL.path]
+                ),
+                "funasr-mlt-nano": EngineInstallConfig(
+                    engineKind: .funasr,
+                    displayName: "FunASR MLT Nano",
+                    binaryPath: mltBinaryURL.path,
+                    modelPath: mltModelURL.path,
+                    defaultMode: .auto,
+                    supportedModes: [.auto, .en, .vi],
+                    runtimeProfile: .crispASRFunASR
+                ),
+            ]
+        )
+        try settings.save(to: configURL)
+
+        let result = try AleVoiceDoctor(
+            sampleAudioResolver: { sampleURL },
+            transcribe: { _, _, mode in
+                XCTAssertEqual(mode, .vi)
+                return .init(engine: .funasr, modelIdentifier: "model", transcript: "ok", latencyMs: 1)
+            }
+        ).run(configURL: configURL)
+
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-sensevoice", status: .passed, detail: "FunASR SenseVoice | modes=auto | default=auto | runtime=llamaCpp")))
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-nano", status: .passed, detail: "FunASR Nano | modes=auto,en | default=auto | runtime=llamaCpp")))
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-mlt-nano", status: .passed, detail: "FunASR MLT Nano | selected | modes=auto,en,vi | default=auto | runtime=crispasrFunASR")))
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-mlt-nano:binary-executable", status: .passed, detail: mltBinaryURL.path)))
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-mlt-nano:model", status: .passed, detail: mltModelURL.path)))
+        XCTAssertTrue(result.checks.contains(.init(name: "engine:funasr-nano:auxiliary-model:encoder", status: .passed, detail: nanoEncoderURL.path)))
     }
 
     func test_cliBuildInvokesAppBuilder() {
