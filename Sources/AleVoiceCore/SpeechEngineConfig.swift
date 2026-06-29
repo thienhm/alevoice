@@ -1,46 +1,116 @@
 import Foundation
 
 public struct EnginePathConfig: Codable, Equatable, Sendable {
+    public let displayName: String
     public let binaryPath: String
     public let modelPath: String
     public let defaultMode: SpeechLanguageMode
+    public let supportedModes: [SpeechLanguageMode]
+    public let auxiliaryModelPaths: [String: String]
 
-    public init(binaryPath: String, modelPath: String, defaultMode: SpeechLanguageMode) {
+    public init(
+        displayName: String = "FunASR",
+        binaryPath: String,
+        modelPath: String,
+        defaultMode: SpeechLanguageMode,
+        supportedModes: [SpeechLanguageMode] = [.auto],
+        auxiliaryModelPaths: [String: String] = [:]
+    ) {
+        self.displayName = displayName
         self.binaryPath = binaryPath
         self.modelPath = modelPath
         self.defaultMode = defaultMode
+        self.supportedModes = supportedModes
+        self.auxiliaryModelPaths = auxiliaryModelPaths
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            displayName: try container.decodeIfPresent(String.self, forKey: .displayName) ?? "FunASR",
+            binaryPath: try container.decode(String.self, forKey: .binaryPath),
+            modelPath: try container.decode(String.self, forKey: .modelPath),
+            defaultMode: try container.decode(SpeechLanguageMode.self, forKey: .defaultMode),
+            supportedModes: try container.decodeIfPresent([SpeechLanguageMode].self, forKey: .supportedModes) ?? [.auto],
+            auxiliaryModelPaths: try container.decodeIfPresent([String: String].self, forKey: .auxiliaryModelPaths) ?? [:]
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case displayName
+        case binaryPath
+        case modelPath
+        case defaultMode
+        case supportedModes
+        case auxiliaryModelPaths
     }
 }
 
 public struct EngineInstallConfig: Codable, Equatable, Sendable {
     public let engineKind: SpeechEngineKind
+    public let displayName: String
     public let binaryPath: String
     public let modelPath: String
     public let defaultMode: SpeechLanguageMode
+    public let supportedModes: [SpeechLanguageMode]
+    public let auxiliaryModelPaths: [String: String]
 
     public init(
         engineKind: SpeechEngineKind,
+        displayName: String = "FunASR",
         binaryPath: String,
         modelPath: String,
-        defaultMode: SpeechLanguageMode
+        defaultMode: SpeechLanguageMode,
+        supportedModes: [SpeechLanguageMode] = [.auto],
+        auxiliaryModelPaths: [String: String] = [:]
     ) {
         self.engineKind = engineKind
+        self.displayName = displayName
         self.binaryPath = binaryPath
         self.modelPath = modelPath
         self.defaultMode = defaultMode
+        self.supportedModes = supportedModes
+        self.auxiliaryModelPaths = auxiliaryModelPaths
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            engineKind: try container.decode(SpeechEngineKind.self, forKey: .engineKind),
+            displayName: try container.decodeIfPresent(String.self, forKey: .displayName) ?? "FunASR",
+            binaryPath: try container.decode(String.self, forKey: .binaryPath),
+            modelPath: try container.decode(String.self, forKey: .modelPath),
+            defaultMode: try container.decode(SpeechLanguageMode.self, forKey: .defaultMode),
+            supportedModes: try container.decodeIfPresent([SpeechLanguageMode].self, forKey: .supportedModes) ?? [.auto],
+            auxiliaryModelPaths: try container.decodeIfPresent([String: String].self, forKey: .auxiliaryModelPaths) ?? [:]
+        )
     }
 
     public var pathConfig: EnginePathConfig {
         EnginePathConfig(
+            displayName: displayName,
             binaryPath: binaryPath,
             modelPath: modelPath,
-            defaultMode: defaultMode
+            defaultMode: defaultMode,
+            supportedModes: supportedModes,
+            auxiliaryModelPaths: auxiliaryModelPaths
         )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case engineKind
+        case displayName
+        case binaryPath
+        case modelPath
+        case defaultMode
+        case supportedModes
+        case auxiliaryModelPaths
     }
 }
 
 public struct SpeechEngineSettings: Codable, Equatable, Sendable {
     public let selectedEngineID: String
+    public let selectedMode: SpeechLanguageMode
     public let engines: [String: EngineInstallConfig]
 
     public var selectedEngineConfig: EngineInstallConfig {
@@ -55,19 +125,36 @@ public struct SpeechEngineSettings: Codable, Equatable, Sendable {
         selectedEngineConfig.pathConfig
     }
 
-    public init(selectedEngineID: String, engines: [String: EngineInstallConfig]) {
+    public var selectedPathConfig: EnginePathConfig {
+        selectedEngineConfig.pathConfig
+    }
+
+    public var availableEngines: [(id: String, config: EngineInstallConfig)] {
+        engines.keys.sorted().map { ($0, engines[$0]!) }
+    }
+
+    public init(
+        selectedEngineID: String,
+        selectedMode: SpeechLanguageMode = .auto,
+        engines: [String: EngineInstallConfig]
+    ) {
         self.selectedEngineID = selectedEngineID
+        self.selectedMode = selectedMode
         self.engines = engines
     }
 
     public init(engine: SpeechEngineKind, funasr: EnginePathConfig) {
         self.selectedEngineID = engine.rawValue
+        self.selectedMode = funasr.defaultMode
         self.engines = [
             engine.rawValue: EngineInstallConfig(
                 engineKind: engine,
+                displayName: funasr.displayName,
                 binaryPath: funasr.binaryPath,
                 modelPath: funasr.modelPath,
-                defaultMode: funasr.defaultMode
+                defaultMode: funasr.defaultMode,
+                supportedModes: funasr.supportedModes,
+                auxiliaryModelPaths: funasr.auxiliaryModelPaths
             ),
         ]
     }
@@ -90,7 +177,13 @@ public struct SpeechEngineSettings: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         if let selectedEngineID = try container.decodeIfPresent(String.self, forKey: .selectedEngine),
            let engines = try container.decodeIfPresent([String: EngineInstallConfig].self, forKey: .engines) {
-            self.init(selectedEngineID: selectedEngineID, engines: engines)
+            self.init(
+                selectedEngineID: selectedEngineID,
+                selectedMode: try container.decodeIfPresent(SpeechLanguageMode.self, forKey: .selectedMode)
+                    ?? engines[selectedEngineID]?.defaultMode
+                    ?? .auto,
+                engines: engines
+            )
             return
         }
 
@@ -102,6 +195,7 @@ public struct SpeechEngineSettings: Codable, Equatable, Sendable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(selectedEngineID, forKey: .selectedEngine)
+        try container.encode(selectedMode, forKey: .selectedMode)
         try container.encode(engines, forKey: .engines)
     }
 
@@ -120,15 +214,21 @@ public struct SpeechEngineSettings: Codable, Equatable, Sendable {
         guard !selected.modelPath.isEmpty else {
             throw SpeechEngineError.invalidConfiguration("funasr modelPath must be non-empty")
         }
-        guard selected.defaultMode == .auto else {
+        guard selected.supportedModes.contains(selectedMode) else {
             throw SpeechEngineError.invalidConfiguration(
-                "funasr runtime only supports defaultMode 'auto' in current local runtime"
+                "selectedMode '\(selectedMode.rawValue)' must be supported by selectedEngine '\(selectedEngineID)'"
             )
+        }
+        for (key, path) in selected.auxiliaryModelPaths {
+            guard !path.isEmpty else {
+                throw SpeechEngineError.invalidConfiguration("auxiliary model path '\(key)' must be non-empty")
+            }
         }
     }
 
     private enum CodingKeys: String, CodingKey {
         case selectedEngine
+        case selectedMode
         case engines
         case engine
         case funasr

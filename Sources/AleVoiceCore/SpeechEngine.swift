@@ -8,6 +8,17 @@ public enum SpeechLanguageMode: String, Codable, Equatable, Sendable {
     case auto
     case en
     case vi
+
+    public var displayName: String {
+        switch self {
+        case .auto:
+            return "Auto"
+        case .en:
+            return "English"
+        case .vi:
+            return "Vietnamese"
+        }
+    }
 }
 
 public struct SpeechTranscriptionRequest: Equatable, Sendable {
