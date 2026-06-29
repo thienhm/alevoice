@@ -29,6 +29,12 @@ public struct DebugAssetLocator {
             return currentDirectoryCandidate
         }
 
+        let repositoryCandidate = repositoryRootURL().appendingPathComponent(relativePath)
+        if isDeveloperBuildBundle(),
+           fileManager.fileExists(atPath: repositoryCandidate.path) {
+            return repositoryCandidate
+        }
+
         let bundledResourceCandidate = bundleURL
             .appendingPathComponent("Contents/Resources", isDirectory: true)
             .appendingPathComponent(relativePath)
@@ -36,7 +42,6 @@ public struct DebugAssetLocator {
             return bundledResourceCandidate
         }
 
-        let repositoryCandidate = repositoryRootURL().appendingPathComponent(relativePath)
         if fileManager.fileExists(atPath: repositoryCandidate.path) {
             return repositoryCandidate
         }
@@ -57,5 +62,16 @@ public struct DebugAssetLocator {
             cursor.deleteLastPathComponent()
         }
         return currentDirectoryURL
+    }
+
+    private func isDeveloperBuildBundle() -> Bool {
+        var cursor = bundleURL.standardizedFileURL
+        while cursor.path != "/" {
+            if cursor.lastPathComponent == ".build" || cursor.lastPathComponent == "build" {
+                return true
+            }
+            cursor.deleteLastPathComponent()
+        }
+        return false
     }
 }
