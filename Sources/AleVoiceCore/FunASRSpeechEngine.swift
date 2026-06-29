@@ -11,6 +11,17 @@ public final class FunASRSpeechEngine: SpeechEngine {
 
     public func buildCommand(for request: SpeechTranscriptionRequest) throws -> [String] {
         try ensureModeSupported(request.mode)
+        if let encoderPath = config.auxiliaryModelPaths["encoder"] {
+            return [
+                config.binaryPath,
+                "--enc",
+                encoderPath,
+                "-m",
+                config.modelPath,
+                "-a",
+                request.audioURL.path,
+            ]
+        }
         return [
             config.binaryPath,
             "-m",
@@ -53,7 +64,7 @@ public final class FunASRSpeechEngine: SpeechEngine {
     }
 
     private func ensureModeSupported(_ mode: SpeechLanguageMode) throws {
-        guard mode == .auto else {
+        guard config.supportedModes.contains(mode) else {
             throw SpeechEngineError.invalidConfiguration(
                 "funasr runtime does not support explicit language mode '\(mode.rawValue)'"
             )

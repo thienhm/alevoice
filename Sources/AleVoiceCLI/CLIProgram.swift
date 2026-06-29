@@ -227,10 +227,15 @@ enum CLIUsage {
     usage: AleVoiceCLI <command>
 
     commands:
-      setup <engine-id> [--config-path <path>] [--install-root <path>] [--force-download]
+      setup funasr-sensevoice [--config-path <path>] [--install-root <path>] [--force-download]
+      setup funasr-nano [--config-path <path>] [--install-root <path>] [--force-download]
       doctor [--config-path <path>]
       transcribe [--config <path>] --audio <path> [--mode auto|en|vi]
       run
+
+    notes:
+      setup merges installed engines into Config/speech-engine.json
+      transcribe uses selected config mode when --mode is omitted
     """
 }
 

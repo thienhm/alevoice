@@ -38,6 +38,40 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertEqual(result.latencyMs, 111)
     }
 
+    func test_transcribeUsesSelectedModeWhenOverrideIsNil() throws {
+        let settings = SpeechEngineSettings(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .vi,
+            engines: [
+                "funasr-nano": EngineInstallConfig(
+                    engineKind: .funasr,
+                    displayName: "FunASR Nano",
+                    binaryPath: "/tmp/llama-funasr-cli",
+                    modelPath: "/tmp/qwen3-0.6b-q4km.gguf",
+                    defaultMode: .auto,
+                    supportedModes: [.auto, .en, .vi],
+                    auxiliaryModelPaths: ["encoder": "/tmp/funasr-encoder-f16.gguf"]
+                ),
+            ]
+        )
+        let engine = StubEngine(
+            result: .init(
+                engine: .funasr,
+                modelIdentifier: "/tmp/qwen3-0.6b-q4km.gguf",
+                transcript: "xin chao",
+                latencyMs: 111
+            )
+        )
+        let coordinator = TranscriptionCoordinator(settings: settings) { _ in engine }
+
+        _ = try coordinator.transcribe(
+            audioURL: URL(fileURLWithPath: "/tmp/vi-001.wav"),
+            overrideMode: nil
+        )
+
+        XCTAssertEqual(engine.lastRequest?.mode, .vi)
+    }
+
     func test_transcribeUsesOverrideModeWhenProvided() throws {
         let settings = SpeechEngineSettings(
             engine: .funasr,
@@ -78,6 +112,9 @@ final class TranscriptionCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(exitCode, 0)
         XCTAssertTrue(output.text.contains("usage: AleVoiceCLI"))
+        XCTAssertTrue(output.text.contains("setup funasr-sensevoice"))
+        XCTAssertTrue(output.text.contains("setup funasr-nano"))
+        XCTAssertTrue(output.text.contains("--mode auto|en|vi"))
         XCTAssertEqual(errorOutput.text, "")
     }
 
@@ -112,6 +149,35 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertEqual(capturedConfigURL?.path, "/tmp/config.json")
         XCTAssertEqual(capturedAudioURL?.path, "/tmp/sample.wav")
         XCTAssertTrue(output.text.contains("engine=funasr"))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliTranscribeOmitsModeSoConfigSelectedModeCanApply() throws {
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+        var capturedMode: SpeechLanguageMode?
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["transcribe", "--config", "/tmp/config.json", "--audio", "/tmp/sample.wav"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, mode in
+                    capturedMode = mode
+                    return .init(engine: .funasr, modelIdentifier: "model", transcript: "hello", latencyMs: 123)
+                },
+                runApp: { fatalError("unexpected") },
+                configPathResolver: { URL(fileURLWithPath: "/tmp/config.json") },
+                installRootResolver: { URL(fileURLWithPath: "/tmp/install", isDirectory: true) },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertNil(capturedMode)
         XCTAssertEqual(errorOutput.text, "")
     }
 
@@ -181,6 +247,48 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertEqual(exitCode, 1)
         XCTAssertTrue(output.text.contains("config: failed"))
         XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_doctorReportsSelectedModeAndAuxiliaryModel() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let binaryURL = root.appendingPathComponent("llama-funasr-cli")
+        let modelURL = root.appendingPathComponent("qwen3-0.6b-q4km.gguf")
+        let encoderURL = root.appendingPathComponent("funasr-encoder-f16.gguf")
+        let sampleURL = root.appendingPathComponent("sample.wav")
+        try Data("bin".utf8).write(to: binaryURL)
+        try Data("model".utf8).write(to: modelURL)
+        try Data("encoder".utf8).write(to: encoderURL)
+        try Data("audio".utf8).write(to: sampleURL)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binaryURL.path)
+        let configURL = root.appendingPathComponent("speech-engine.json")
+        let settings = SpeechEngineSettings(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .vi,
+            engines: [
+                "funasr-nano": EngineInstallConfig(
+                    engineKind: .funasr,
+                    displayName: "FunASR Nano",
+                    binaryPath: binaryURL.path,
+                    modelPath: modelURL.path,
+                    defaultMode: .auto,
+                    supportedModes: [.auto, .en, .vi],
+                    auxiliaryModelPaths: ["encoder": encoderURL.path]
+                ),
+            ]
+        )
+        try settings.save(to: configURL)
+
+        let result = try AleVoiceDoctor(
+            sampleAudioResolver: { sampleURL },
+            transcribe: { _, _, mode in
+                XCTAssertEqual(mode, .vi)
+                return .init(engine: .funasr, modelIdentifier: "model", transcript: "ok", latencyMs: 1)
+            }
+        ).run(configURL: configURL)
+
+        XCTAssertTrue(result.checks.contains(.init(name: "selected-mode", status: .passed, detail: "vi")))
+        XCTAssertTrue(result.checks.contains(.init(name: "auxiliary-model:encoder", status: .passed, detail: encoderURL.path)))
     }
 
     func test_cliRunInvokesRepoLauncher() {

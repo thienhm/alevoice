@@ -29,6 +29,7 @@ struct AleVoiceDoctor {
         do {
             settings = try SpeechEngineSettings.load(from: configURL)
             checks.append(.init(name: "config-parse", status: .passed, detail: settings.selectedEngineID))
+            checks.append(.init(name: "selected-mode", status: .passed, detail: settings.selectedMode.rawValue))
         } catch {
             checks.append(.init(name: "config-parse", status: .failed, detail: "\(error)"))
             return SetupDoctorResult(checks: checks)
@@ -54,6 +55,14 @@ struct AleVoiceDoctor {
             checks.append(.init(name: "model", status: .failed, detail: "missing model at \(modelURL.path)"))
         }
 
+        for (key, path) in settings.selectedEngineConfig.auxiliaryModelPaths.sorted(by: { $0.key < $1.key }) {
+            if fileManager.fileExists(atPath: path) {
+                checks.append(.init(name: "auxiliary-model:\(key)", status: .passed, detail: path))
+            } else {
+                checks.append(.init(name: "auxiliary-model:\(key)", status: .failed, detail: "missing model at \(path)"))
+            }
+        }
+
         let sampleAudioURL = sampleAudioResolver()
         if fileManager.fileExists(atPath: sampleAudioURL.path) {
             checks.append(.init(name: "sample-audio", status: .passed, detail: sampleAudioURL.path))
@@ -63,7 +72,7 @@ struct AleVoiceDoctor {
 
         if checks.allSatisfy({ $0.status == .passed }) {
             do {
-                _ = try transcribe(configURL, sampleAudioURL, .auto)
+                _ = try transcribe(configURL, sampleAudioURL, settings.selectedMode)
                 checks.append(.init(name: "sample-transcribe", status: .passed, detail: "sample transcription succeeded"))
             } catch {
                 checks.append(.init(name: "sample-transcribe", status: .failed, detail: "\(error)"))

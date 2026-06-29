@@ -40,6 +40,35 @@ final class FunASRSpeechEngineTests: XCTestCase {
         }
     }
 
+    func test_buildCommandUsesNanoEncoderAndDecoder() throws {
+        let config = EnginePathConfig(
+            displayName: "FunASR Nano",
+            binaryPath: "/tmp/llama-funasr-cli",
+            modelPath: "/tmp/qwen3-0.6b-q4km.gguf",
+            defaultMode: .auto,
+            supportedModes: [.auto, .en, .vi],
+            auxiliaryModelPaths: ["encoder": "/tmp/funasr-encoder-f16.gguf"]
+        )
+        let engine = FunASRSpeechEngine(config: config, runner: FakeRunner())
+        let request = SpeechTranscriptionRequest(
+            audioURL: URL(fileURLWithPath: "/tmp/vi-001.wav"),
+            mode: .vi
+        )
+
+        XCTAssertEqual(
+            try engine.buildCommand(for: request),
+            [
+                "/tmp/llama-funasr-cli",
+                "--enc",
+                "/tmp/funasr-encoder-f16.gguf",
+                "-m",
+                "/tmp/qwen3-0.6b-q4km.gguf",
+                "-a",
+                "/tmp/vi-001.wav",
+            ]
+        )
+    }
+
     func test_transcribeStripsTimestampWrapperAndReturnsLatency() throws {
         let runner = FakeRunner(
             stdout: "[00:00:00.000 --> 00:00:02.000]   hello from engine\n",

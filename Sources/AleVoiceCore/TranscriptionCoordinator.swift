@@ -19,11 +19,11 @@ public struct TranscriptionCoordinator {
         let engine: SpeechEngine
         switch settings.engine {
         case .funasr:
-            engine = engineFactory(settings.funasr)
+            engine = engineFactory(settings.selectedPathConfig)
         }
         let request = SpeechTranscriptionRequest(
             audioURL: audioURL,
-            mode: overrideMode ?? settings.funasr.defaultMode
+            mode: overrideMode ?? settings.selectedMode
         )
         return try engine.transcribe(request)
     }
