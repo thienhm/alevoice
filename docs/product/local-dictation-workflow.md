@@ -12,11 +12,14 @@ Define the current native macOS dictation workflow for the menu bar MVP.
   `swift run AleVoiceCLI setup funasr-nano`.
 - Optional Vietnamese-capable install path:
   `swift run AleVoiceCLI setup funasr-mlt-nano`.
+- Installed local engines can be removed with `swift run AleVoiceCLI remove`.
 - Setup writes repo-local config at `Config/speech-engine.json`.
 - Managed runtime/model artifacts live under
   `~/Library/Application Support/AleVoice/`.
 - Repeated setup commands merge engines into the same config instead of
   replacing earlier installs.
+- Remove deletes the chosen engine from config and deletes that engine's managed
+  runtime/model directory, but leaves cached downloads alone.
 - CLI build prepares/signs `build/AleVoice.app`; CLI run opens the existing
   bundle without rebuilding it.
 - The app bundle itself does not embed third-party runtime/model payloads in

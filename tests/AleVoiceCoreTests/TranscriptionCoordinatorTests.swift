@@ -116,6 +116,7 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertTrue(output.text.contains("setup funasr-nano"))
         XCTAssertTrue(output.text.contains("setup funasr-mlt-nano"))
         XCTAssertTrue(output.text.contains("--mode auto|en|vi"))
+        XCTAssertTrue(output.text.contains("remove"))
         XCTAssertTrue(output.text.contains("build"))
         XCTAssertTrue(output.text.contains("run"))
         XCTAssertEqual(errorOutput.text, "")
@@ -455,6 +456,196 @@ final class TranscriptionCoordinatorTests: XCTestCase {
         XCTAssertTrue(errorOutput.text.contains("build it first"))
     }
 
+    func test_installedModelRemoverDeletesConfigEntryAndManagedPayload() throws {
+        let fixture = try RemoveModelFixture(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .en,
+            engines: [
+                "funasr-nano": .engine(displayName: "FunASR Nano", defaultMode: .auto, supportedModes: [.auto, .en]),
+                "funasr-mlt-nano": .engine(displayName: "FunASR MLT Nano", defaultMode: .vi, supportedModes: [.auto, .vi]),
+            ]
+        )
+        let nanoRoot = try fixture.createManagedEngineDirectory(id: "funasr-nano")
+        _ = try fixture.createManagedEngineDirectory(id: "funasr-mlt-nano")
+
+        let result = try InstalledModelRemover().remove(
+            engineID: "funasr-nano",
+            configURL: fixture.configURL,
+            installRoot: fixture.installRoot
+        )
+
+        let settings = try SpeechEngineSettings.load(from: fixture.configURL)
+        XCTAssertNil(settings.engines["funasr-nano"])
+        XCTAssertEqual(settings.selectedEngineID, "funasr-mlt-nano")
+        XCTAssertEqual(settings.selectedMode, .vi)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: nanoRoot.path))
+        XCTAssertEqual(result.removedEngineID, "funasr-nano")
+        XCTAssertEqual(result.removedDisplayName, "FunASR Nano")
+        XCTAssertEqual(result.selectedEngineID, "funasr-mlt-nano")
+    }
+
+    func test_installedModelRemoverPreservesSelectionWhenRemovingUnselectedEngine() throws {
+        let fixture = try RemoveModelFixture(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .en,
+            engines: [
+                "funasr-nano": .engine(displayName: "FunASR Nano", defaultMode: .auto, supportedModes: [.auto, .en]),
+                "funasr-mlt-nano": .engine(displayName: "FunASR MLT Nano", defaultMode: .vi, supportedModes: [.auto, .vi]),
+            ]
+        )
+        _ = try fixture.createManagedEngineDirectory(id: "funasr-nano")
+        _ = try fixture.createManagedEngineDirectory(id: "funasr-mlt-nano")
+
+        _ = try InstalledModelRemover().remove(
+            engineID: "funasr-mlt-nano",
+            configURL: fixture.configURL,
+            installRoot: fixture.installRoot
+        )
+
+        let settings = try SpeechEngineSettings.load(from: fixture.configURL)
+        XCTAssertEqual(settings.selectedEngineID, "funasr-nano")
+        XCTAssertEqual(settings.selectedMode, .en)
+    }
+
+    func test_installedModelRemoverRejectsRemovingOnlyInstalledModel() throws {
+        let fixture = try RemoveModelFixture(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .en,
+            engines: [
+                "funasr-nano": .engine(displayName: "FunASR Nano", defaultMode: .auto, supportedModes: [.auto, .en]),
+            ]
+        )
+        let nanoRoot = try fixture.createManagedEngineDirectory(id: "funasr-nano")
+
+        XCTAssertThrowsError(
+            try InstalledModelRemover().remove(
+                engineID: "funasr-nano",
+                configURL: fixture.configURL,
+                installRoot: fixture.installRoot
+            )
+        ) { error in
+            XCTAssertEqual(error as? CLIError, CLIError(description: "cannot remove the only installed model"))
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nanoRoot.path))
+    }
+
+    func test_cliRemoveListsModelsPromptsAndRemovesConfirmedSelection() throws {
+        let fixture = try RemoveModelFixture(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .en,
+            engines: [
+                "funasr-nano": .engine(displayName: "FunASR Nano", defaultMode: .auto, supportedModes: [.auto, .en]),
+                "funasr-mlt-nano": .engine(displayName: "FunASR MLT Nano", defaultMode: .vi, supportedModes: [.auto, .vi]),
+            ]
+        )
+        _ = try fixture.createManagedEngineDirectory(id: "funasr-nano")
+        let mltRoot = try fixture.createManagedEngineDirectory(id: "funasr-mlt-nano")
+        var inputs = ["2", "y"]
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["remove"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                runApp: { fatalError("unexpected") },
+                configPathResolver: { fixture.configURL },
+                installRootResolver: { fixture.installRoot },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardInput: { inputs.isEmpty ? nil : inputs.removeFirst() },
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        let settings = try SpeechEngineSettings.load(from: fixture.configURL)
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertTrue(output.text.contains("1. FunASR MLT Nano (funasr-mlt-nano)"))
+        XCTAssertTrue(output.text.contains("2. FunASR Nano (funasr-nano) [selected]"))
+        XCTAssertTrue(output.text.contains("removed FunASR Nano"))
+        XCTAssertNil(settings.engines["funasr-nano"])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: mltRoot.path))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliRemoveCancellationLeavesConfigAndFilesUntouched() throws {
+        let fixture = try RemoveModelFixture(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .en,
+            engines: [
+                "funasr-nano": .engine(displayName: "FunASR Nano", defaultMode: .auto, supportedModes: [.auto, .en]),
+                "funasr-mlt-nano": .engine(displayName: "FunASR MLT Nano", defaultMode: .vi, supportedModes: [.auto, .vi]),
+            ]
+        )
+        let nanoRoot = try fixture.createManagedEngineDirectory(id: "funasr-nano")
+        var inputs = ["2", "n"]
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["remove"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                runApp: { fatalError("unexpected") },
+                configPathResolver: { fixture.configURL },
+                installRootResolver: { fixture.installRoot },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardInput: { inputs.isEmpty ? nil : inputs.removeFirst() },
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        let settings = try SpeechEngineSettings.load(from: fixture.configURL)
+        XCTAssertEqual(exitCode, 0)
+        XCTAssertNotNil(settings.engines["funasr-nano"])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: nanoRoot.path))
+        XCTAssertTrue(output.text.contains("cancelled"))
+        XCTAssertEqual(errorOutput.text, "")
+    }
+
+    func test_cliRemoveRejectsInvalidSelectionWithoutMutation() throws {
+        let fixture = try RemoveModelFixture(
+            selectedEngineID: "funasr-nano",
+            selectedMode: .en,
+            engines: [
+                "funasr-nano": .engine(displayName: "FunASR Nano", defaultMode: .auto, supportedModes: [.auto, .en]),
+                "funasr-mlt-nano": .engine(displayName: "FunASR MLT Nano", defaultMode: .vi, supportedModes: [.auto, .vi]),
+            ]
+        )
+        var inputs = ["3"]
+        let output = LockedTextOutput()
+        let errorOutput = LockedTextOutput()
+
+        let exitCode = AleVoiceCLIProgram.run(
+            arguments: ["remove"],
+            context: CLIContext(
+                manifestLoader: { _ in fatalError("unexpected") },
+                installer: { _ in fatalError("unexpected") },
+                doctor: { _ in fatalError("unexpected") },
+                transcribe: { _, _, _ in fatalError("unexpected") },
+                runApp: { fatalError("unexpected") },
+                configPathResolver: { fixture.configURL },
+                installRootResolver: { fixture.installRoot },
+                sampleAudioResolver: { URL(fileURLWithPath: "/tmp/sample.wav") }
+            ),
+            standardInput: { inputs.isEmpty ? nil : inputs.removeFirst() },
+            standardOutput: output.append,
+            standardError: errorOutput.append
+        )
+
+        let settings = try SpeechEngineSettings.load(from: fixture.configURL)
+        XCTAssertEqual(exitCode, 1)
+        XCTAssertNotNil(settings.engines["funasr-nano"])
+        XCTAssertTrue(errorOutput.text.contains("invalid selection"))
+    }
+
     func test_cliParserRejectsFlagTokenAsConfigValue() {
         XCTAssertThrowsError(try CLIArguments(arguments: ["--config", "--audio", "/tmp/sample.wav"])) { error in
             XCTAssertEqual(
@@ -514,5 +705,54 @@ private final class LockedTextOutput: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         text += value
+    }
+}
+
+private struct RemoveModelFixture {
+    let root: URL
+    let configURL: URL
+    let installRoot: URL
+
+    init(
+        selectedEngineID: String,
+        selectedMode: SpeechLanguageMode,
+        engines: [String: EngineInstallConfig]
+    ) throws {
+        self.root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        self.configURL = root.appendingPathComponent("speech-engine.json")
+        self.installRoot = root.appendingPathComponent("install", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let settings = SpeechEngineSettings(
+            selectedEngineID: selectedEngineID,
+            selectedMode: selectedMode,
+            engines: engines
+        )
+        try settings.save(to: configURL)
+    }
+
+    func createManagedEngineDirectory(id: String) throws -> URL {
+        let url = installRoot
+            .appendingPathComponent("engines", isDirectory: true)
+            .appendingPathComponent(id, isDirectory: true)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        try Data("payload".utf8).write(to: url.appendingPathComponent("payload.txt"))
+        return url
+    }
+}
+
+private extension EngineInstallConfig {
+    static func engine(
+        displayName: String,
+        defaultMode: SpeechLanguageMode,
+        supportedModes: [SpeechLanguageMode]
+    ) -> EngineInstallConfig {
+        EngineInstallConfig(
+            engineKind: .funasr,
+            displayName: displayName,
+            binaryPath: "/tmp/\(displayName)-binary",
+            modelPath: "/tmp/\(displayName)-model",
+            defaultMode: defaultMode,
+            supportedModes: supportedModes
+        )
     }
 }

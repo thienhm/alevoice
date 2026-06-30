@@ -58,6 +58,12 @@ For Vietnamese-capable MLT Nano, add the larger CrispASR-backed engine:
 swift run AleVoiceCLI setup funasr-mlt-nano
 ```
 
+Remove an installed engine interactively:
+
+```bash
+swift run AleVoiceCLI remove
+```
+
 Each setup command will:
 
 - download the pinned FunASR runtime and engine model artifacts
@@ -198,6 +204,12 @@ Inspect multi-engine CLI help:
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI --help
+```
+
+Remove one installed engine from config and managed local payloads:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift run AleVoiceCLI remove
 ```
 
 Check the current setup state:

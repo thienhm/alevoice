@@ -165,6 +165,7 @@ enum CLICommand {
     case setup(engineID: String, configURL: URL?, installRoot: URL?, forceDownload: Bool)
     case doctor(configURL: URL?)
     case transcribe(CLIArguments)
+    case remove
     case build
     case run
 }
@@ -190,6 +191,11 @@ enum CLICommandParser {
             return try parseDoctor(arguments: Array(arguments.dropFirst()))
         case "transcribe":
             return .transcribe(try CLIArguments(arguments: Array(arguments.dropFirst())))
+        case "remove":
+            guard arguments.count == 1 else {
+                throw CLIError(description: "unknown remove argument '\(arguments[1])'")
+            }
+            return .remove
         case "build":
             return .build
         case "run":
@@ -266,11 +272,13 @@ enum CLIUsage {
       setup funasr-mlt-nano [--config-path <path>] [--install-root <path>] [--force-download]
       doctor [--config-path <path>]
       transcribe [--config <path>] --audio <path> [--mode auto|en|vi]
+      remove
       build
       run
 
     notes:
       setup merges installed engines into Config/speech-engine.json
+      remove deletes the selected installed engine config entry and managed runtime/model files
       transcribe uses selected config mode when --mode is omitted
     """
 }
@@ -279,6 +287,7 @@ enum AleVoiceCLIProgram {
     static func run(
         arguments: [String],
         context: CLIContext = .live(),
+        standardInput: () -> String? = { readLine() },
         standardOutput: (String) -> Void = { fputs($0, stdout) },
         standardError: (String) -> Void = { fputs($0, stderr) }
     ) -> Int32 {
@@ -323,6 +332,12 @@ enum AleVoiceCLIProgram {
                 standardOutput("latency_ms=\(result.latencyMs)\n")
                 standardOutput("\(result.transcript)\n")
                 return 0
+            case .remove:
+                return try runRemove(
+                    context: context,
+                    standardInput: standardInput,
+                    standardOutput: standardOutput
+                )
             case .build:
                 try context.buildApp()
                 standardOutput("built app\n")
@@ -339,6 +354,48 @@ enum AleVoiceCLIProgram {
             standardError("\(error)\n")
             return 1
         }
+    }
+
+    private static func runRemove(
+        context: CLIContext,
+        standardInput: () -> String?,
+        standardOutput: (String) -> Void
+    ) throws -> Int32 {
+        let configURL = context.configPathResolver()
+        let settings = try SpeechEngineSettings.load(from: configURL)
+        guard settings.availableEngines.isEmpty == false else {
+            throw CLIError(description: "no installed models found")
+        }
+
+        standardOutput("Installed models:\n")
+        for (index, entry) in settings.availableEngines.enumerated() {
+            let marker = entry.id == settings.selectedEngineID ? " [selected]" : ""
+            standardOutput("\(index + 1). \(entry.config.displayName) (\(entry.id))\(marker)\n")
+        }
+        standardOutput("Select model to remove: ")
+        guard let selectionText = standardInput(),
+              let selection = Int(selectionText),
+              (1...settings.availableEngines.count).contains(selection) else {
+            throw CLIError(description: "invalid selection")
+        }
+
+        let selected = settings.availableEngines[selection - 1]
+        standardOutput("Remove \(selected.config.displayName)? [y/N] ")
+        let confirmation = standardInput()?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard confirmation == "y" || confirmation == "yes" else {
+            standardOutput("cancelled\n")
+            return 0
+        }
+
+        let result = try InstalledModelRemover().remove(
+            engineID: selected.id,
+            configURL: configURL,
+            installRoot: context.installRootResolver()
+        )
+        standardOutput("removed \(result.removedDisplayName)\n")
+        standardOutput("selected=\(result.selectedEngineID)\n")
+        standardOutput("deleted=\(result.removedDirectoryURL.path)\n")
+        return 0
     }
 }
 
